@@ -12,7 +12,7 @@
   ],
   "tags": [
     {
-      "name": "StatsController",
+      "name": "ru.practicum.statservice.StatsController",
       "description": "API для работы со статистикой посещений"
     }
   ],
@@ -20,7 +20,7 @@
     "/hit": {
       "post": {
         "tags": [
-          "StatsController"
+          "ru.practicum.statservice.StatsController"
         ],
         "summary": "Сохранение информации о том, что к эндпоинту был запрос",
         "description": "Сохранение информации о том, что на uri конкретного сервиса был отправлен запрос пользователем. Название сервиса, uri и ip пользователя указаны в теле запроса.",
@@ -46,7 +46,7 @@
     "/stats": {
       "get": {
         "tags": [
-          "StatsController"
+          "ru.practicum.statservice.StatsController"
         ],
         "summary": "Получение статистики по посещениям. Обратите внимание: значение даты и времени нужно закодировать (например используя java.net.URLEncoder.encode) ",
         "operationId": "getStats",
