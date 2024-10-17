@@ -16,7 +16,6 @@
     </properties>
     <modules>
         <module>server</module>
-        <module>commondto</module>
     </modules>
     <dependencies>
         <dependency>
