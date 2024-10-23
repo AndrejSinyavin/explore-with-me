@@ -1,6 +1,5 @@
 package ru.practicum.ewm.statsserver.server.model;
 
-import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,13 +13,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
-@SpringBootTest
-@RequiredArgsConstructor(onConstructor = @__(@Autowired))
+@SpringBootTest(classes = {StatsServiceImpl.class, StatsRepository.class})
 //@AutoConfigureTestDatabase(connection = EmbeddedDatabaseConnection.H2)
 @DisplayName("Набор интеграционных тестов для репозитория сервиса статистики")
 public class StatsRepositoryTest {
-    private final StatsRepository statsRepository;
-    private final StatsService statsService;
+    @Autowired
+    private StatsServiceImpl statsService;
     private EndpointHitEntity hitOne;
     private EndpointHitEntity hitTwo;
     private EndpointHitEntity hitThree;
