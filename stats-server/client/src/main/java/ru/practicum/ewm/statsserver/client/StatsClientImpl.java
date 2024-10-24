@@ -1,8 +1,6 @@
 package ru.practicum.ewm.statsserver.client;
 
-import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
-import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -18,11 +16,11 @@ import java.util.List;
 import java.util.Optional;
 
 @Component
+@RequiredArgsConstructor(onConstructor = @__(@Autowired))
 @Slf4j
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class StatsClientImpl {
-    static String STATS_SERVICE_URI = "http://localhost:9090/";
-    RestTemplate restTemplate = new RestTemplate();
+    private static final String STATS_SERVICE_URI = "http://localhost:9090/";
+    private final RestTemplate restTemplate;
 
     public Boolean hit(String app, String uri, String ip, String timestamp) {
         try {

@@ -20,6 +20,9 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+/**
+ * Контроллер обработки REST-запросов на API сервиса статистики
+ */
 @Slf4j
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @RequiredArgsConstructor
@@ -58,7 +61,8 @@ public class StatsController {
         return new EndpointHitEntity(0L, dto.app(), dto.uri(), dto.ip(),
                 Instant.from(
                         LocalDateTime.parse(dto.timestamp(),
-                        DateTimeFormatter.ofPattern(DATE_TIME_PATTERN)).atZone(ZoneId.of(GMT)))
+                        DateTimeFormatter.ofPattern(DATE_TIME_PATTERN)).atZone(ZoneId.of(GMT))
+                )
         );
     }
 }

@@ -1,8 +1,6 @@
 package ru.practicum.ewm.statsserver.server.model;
 
-import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
-import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
 import ru.practicum.ewm.statsserver.commondto.ViewStatsDto;
 import ru.practicum.ewm.statsserver.server.exception.InternalServiceException;
@@ -19,10 +17,9 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class StatsServiceImpl implements StatsService {
-    static String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
-    StatsRepository statsRepository;
+    private static final String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
+    private final StatsRepository statsRepository;
 
     /**
      * Метод сохраняет в БД информации о том, что на uri конкретного сервиса был отправлен запрос пользователем.
