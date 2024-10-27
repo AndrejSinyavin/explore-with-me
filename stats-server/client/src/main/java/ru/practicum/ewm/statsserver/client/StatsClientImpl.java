@@ -11,6 +11,7 @@ import org.springframework.web.client.RestTemplate;
 import ru.practicum.ewm.statsserver.commondto.EndpointHitCreateDto;
 import ru.practicum.ewm.statsserver.commondto.ViewStatsDto;
 
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
