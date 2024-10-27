@@ -1,8 +1,6 @@
 services:
   stats-server:
     build: stats-server/server
-    depends_on:
-      - stats-db
     container_name: stats-server
     ports:
       - "9090:9090"
@@ -26,8 +24,6 @@ services:
 
   ewm-service:
     build: ewm-service
-    depends_on:
-      - ewm-db
     container_name: ewm-service
     ports:
       - "8080:8080"
