@@ -1,7 +1,5 @@
 package ru.practicum.ewm.statsserver.commondto;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
 import java.io.Serializable;
 
 /**
@@ -12,7 +10,6 @@ import java.io.Serializable;
  * @param hits количество сделанных запросов, подсчитывается на основании параметров в сервисном запросе
  *            на получение статистики
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
 public record ViewStatsDto(
         String app,
         String uri,

@@ -1,7 +1,5 @@
 package ru.practicum.ewm.statsserver.commondto;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
 import java.io.Serializable;
 
 /**
@@ -12,7 +10,6 @@ import java.io.Serializable;
  * @param ip с какого IP был выполнен запрос
  * @param timestamp дата и время выполнения запроса
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
 public record EndpointHitCreateDto(
         String app,
         String uri,

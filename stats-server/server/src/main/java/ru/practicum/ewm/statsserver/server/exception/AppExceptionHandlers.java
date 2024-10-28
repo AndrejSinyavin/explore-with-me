@@ -32,44 +32,44 @@ public class AppExceptionHandlers {
      * Обработчик исключений для ответов BAD_REQUEST для запросов
      * с отсутствующим или несоответствующим форматом тела или заголовков.
      *
-     * @param e перехваченное исключение
+     * @param exception перехваченное исключение
      * @return стандартный API-ответ об ошибке ErrorResponse с описанием ошибки и вероятных причинах
      */
     @ExceptionHandler({HttpMessageNotReadableException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorResponse handleHttpMessageNotReadableExceptionResponse(final HttpMessageNotReadableException e) {
-        log.warn(LOG_RESPONSE_THREE, BAD_REQUEST, NOT_READABLE_BODY, e.getStackTrace());
+    public ErrorResponse handleHttpMessageNotReadableExceptionResponse(final HttpMessageNotReadableException exception) {
+        log.warn(LOG_RESPONSE_THREE, BAD_REQUEST, NOT_READABLE_BODY, exception.getStackTrace());
         return new ErrorResponse(BAD_REQUEST, NOT_READABLE_BODY);
     }
 
     /**
      * Обработчик исключений для ответов INTERNAL_SERVER_ERROR
      *
-     * @param e перехваченное исключение
+     * @param exception перехваченное исключение
      * @return стандартный API-ответ об ошибке ErrorResponse с описанием ошибки и вероятных причинах
      */
     @ExceptionHandler({InternalServiceException.class})
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ErrorResponse handleServerInternalErrorResponse(final AppException e) {
+    public ErrorResponse handleServerInternalErrorResponse(final AppException exception) {
         log.error(LOG_RESPONSE_FIVE, INTERNAL_SERVER_ERROR.concat(SERVER_ERROR),
-                e.getSource(), e.getError(), e.getMessage(), e.getStackTrace());
+                exception.getSource(), exception.getError(), exception.getMessage(), exception.getStackTrace());
         return new ErrorResponse(
                 INTERNAL_SERVER_ERROR,
-                SERVER_ERROR.concat(SEPARATOR).concat(e.getLocalizedMessage())
+                SERVER_ERROR.concat(SEPARATOR).concat(exception.getLocalizedMessage())
         );
     }
 
     /**
      * Обработчик исключений - заглушка, для обработки прочих непредусмотренных исключений.
      *
-     * @param e перехваченное исключение
+     * @param exception перехваченное исключение
      * @return стандартный API-ответ об ошибке ErrorResponse с описанием ошибки и вероятных причинах
      */
     @ExceptionHandler(Throwable.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ErrorResponse handleInternalServerFailureResponse(final Throwable e) {
-        log.error(INTERNAL_SERVER_ERROR.concat(SERVER_FAILURE).concat(Arrays.toString(e.getStackTrace())));
-        return new ErrorResponse(INTERNAL_SERVER_ERROR.concat(SERVER_FAILURE), e.getMessage());
+    public ErrorResponse handleInternalServerFailureResponse(final Throwable exception) {
+        log.error(INTERNAL_SERVER_ERROR.concat(SERVER_FAILURE).concat(Arrays.toString(exception.getStackTrace())));
+        return new ErrorResponse(INTERNAL_SERVER_ERROR.concat(SERVER_FAILURE), exception.getMessage());
     }
 
 }
