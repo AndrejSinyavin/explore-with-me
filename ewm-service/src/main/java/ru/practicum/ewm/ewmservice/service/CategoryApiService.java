@@ -5,7 +5,7 @@ import ru.practicum.ewm.ewmservice.dto.CategoryNewDto;
 
 import java.util.List;
 
-public interface ApiCategory {
+public interface CategoryApiService {
     CategoryDto addCategory(CategoryNewDto categoryNewDto);
 
     CategoryDto getCategoryById(Long cId);
@@ -14,6 +14,5 @@ public interface ApiCategory {
 
     void deleteCategoryById(Long cId);
 
-    CategoryDto patchCategoryById(Long cId, CategoryNewDto categoryNewDto);
-
+    CategoryDto updateCategoryById(Long cId, CategoryNewDto categoryNewDto);
 }

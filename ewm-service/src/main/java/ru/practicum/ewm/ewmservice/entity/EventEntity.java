@@ -17,6 +17,7 @@ import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import ru.practicum.ewm.ewmservice.dto.EventFullDto;
+import ru.practicum.ewm.ewmservice.dto.EventShortDto;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -29,7 +30,7 @@ import static java.time.Clock.systemUTC;
 @Entity
 @Table(name = "events", schema = "public")
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class EntityEvent {
+public class EventEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
@@ -41,7 +42,7 @@ public class EntityEvent {
     @ManyToOne(fetch = FetchType.LAZY)
     @OnDelete(action = OnDeleteAction.RESTRICT)
     @JoinColumn(name = "category", nullable = false)
-    EntityCategory entityCategory;
+    CategoryEntity categoryEntity;
 
     @Column(name = "confirmed_requests")
     Long confirmedRequests;
@@ -58,12 +59,12 @@ public class EntityEvent {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @OnDelete(action = OnDeleteAction.RESTRICT)
     @JoinColumn(name = "initiator", nullable = false)
-    EntityUser initiator;
+    UserEntity initiator;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @OnDelete(action = OnDeleteAction.RESTRICT)
     @JoinColumn(name = "location", nullable = false)
-    EntityEventLocation location;
+    EventLocationEntity location;
 
     @Column(name = "paid", nullable = false)
     Boolean paid = true;
@@ -77,8 +78,8 @@ public class EntityEvent {
     @Column(name = "request_moderation")
     Boolean requestModeration = true;
 
-    @Column(name = "state", columnDefinition = "Статус события")
-    String state;
+    @Column(name = "state")
+    EventState state;
 
     @Column(name = "title", nullable = false, length = 120)
     String title;
@@ -90,7 +91,7 @@ public class EntityEvent {
         return new EventFullDto(
                 id,
                 annotation,
-                entityCategory.toCategoryDto(),
+                categoryEntity.toCategoryDto(),
                 confirmedRequests,
                 localDataTimeOf(createdOn),
                 description,
@@ -103,7 +104,21 @@ public class EntityEvent {
                 requestModeration,
                 title,
                 views,
-                state
+                state.name()
+        );
+    }
+
+    public EventShortDto toEventShortDto() {
+        return new EventShortDto(
+                id,
+                annotation,
+                categoryEntity.toCategoryDto(),
+                confirmedRequests,
+                localDataTimeOf(eventDate),
+                initiator.toUserShortDto(),
+                paid,
+                title,
+                views
         );
     }
 

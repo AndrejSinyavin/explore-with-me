@@ -1,5 +1,6 @@
 package ru.practicum.ewm.ewmservice.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -21,13 +22,16 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import ru.practicum.ewm.ewmservice.dto.CategoryDto;
 import ru.practicum.ewm.ewmservice.dto.CategoryNewDto;
+import ru.practicum.ewm.ewmservice.dto.EventFullDto;
+import ru.practicum.ewm.ewmservice.dto.UpdateEventAdminRequestDto;
 import ru.practicum.ewm.ewmservice.dto.UserNewDto;
 import ru.practicum.ewm.ewmservice.dto.UserDto;
-import ru.practicum.ewm.ewmservice.exception.AppRequestValidateException;
+import ru.practicum.ewm.ewmservice.exception.EwmAppRequestValidateException;
 import ru.practicum.ewm.ewmservice.service.EwmService;
-import ru.practicum.ewm.ewmservice.service.ApiUser.SearchCriteria;
+import ru.practicum.ewm.ewmservice.service.UserApiService.SearchCriteria;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Validated
@@ -41,23 +45,28 @@ public class AdminLayerApiController {
     static final String LIST_IDS = "ids";
     static final String CID = "cat-id";
     static final String UID = "user-id";
+    static final String EID = "event-id";
     static final String SIZE = "size";
     static final String FROM = "from";
     static Integer FROM_DEFAULT = 0;
     static Integer SIZE_DEFAULT = 10;
     static String POST_USER_REQUEST = "\n==>   Запрос POST: создать пользователя {}";
-    static String POST_CATEGORY_REQUEST = "\n==>   Запрос POST: создать категорию {}";
+    static String CREATE_CATEGORY_REQUEST = "\n==>   Запрос POST: создать категорию события {}";
     static String DELETE_USER_REQUEST = "\n==>   Запрос DELETE: удалить пользователя ID {}";
     static String GET_USERS_REQUEST =
             "\n==>   Запрос GET: получить список пользователей из диапазона: pageFrom {} pageSize {} ids {} ";
-    static String PATCH_CATEGORY_REQUEST = "\n==>   Запрос PATCH: обновить категорию ID {}: {}";
-    static String CREATED_USER_RESPONSE = "\n<==   Ответ: '201 Created' Запрос выполнен - создан пользователь {}";
-    static String CREATED_CATEGORY_RESPONSE = "\n<==   Ответ: '201 Created' Запрос выполнен - создана категория {}";
-    static String DELETED_USER_RESPONSE = "\n<==   Ответ: '204 No Content' Запрос выполнен - пользователь ID {} удален";
+    static String UPDATE_CATEGORY_REQUEST = "\n==>   Запрос PATCH: обновить категорию события ID {}: {}";
+    static String USER_CREATED = "\n<==   Ответ: '201 Created' Запрос выполнен - создан пользователь {}";
+    static String CATEGORY_CREATED = "\n<==   Ответ: '201 Created' Запрос выполнен - создана категория события {}";
+    static String USER_DELETED = "\n<==   Ответ: '204 No Content' Запрос выполнен - пользователь ID {} удален";
     static String GET_USERS_RESPONSE = "\n<==   Ответ: '200 Ok' Запрос выполнен - список запрошенных пользователей: {}";
-    static String PATCH_CATEGORY_RESPONSE = "\n<==   Ответ: '200 Ok' Запрос выполнен - обновленная категория: {}";
-    static String DELETE_CATEGORY_REQUEST = "\n==>   Запрос DELETE: удалить категорию {}";
-    static String DELETED_CATEGORY_RESPONSE = "\n<==   Ответ: '204 No Content' Запрос выполнен - категория ID {} удалена";
+    static String UPDATE_CATEGORY_CREATED = "\n<==   Ответ: '200 Ok' Запрос выполнен - категория события обновлена: {}";
+    static String DELETE_CATEGORY_REQUEST = "\n==>   Запрос DELETE: удалить категорию события {}";
+    static String CATEGORY_DELETED = "\n<==   Ответ: '204 No Content' Запрос выполнен, категория события ID {} удалена";
+    static String ADMIN_UPDATE_REQUEST = "\n==>   Запрос PATCH: администратор редактирует событие ID {}: {} ";
+    static String ADMIN_UPDATE_CREATED = "\n<==   Ответ: '200 Ok' Запрос выполнен. Событие ID {} изменено: {} ";
+    static String EVENTS_ADMIN_REQUEST = "\n==>   Запрос GET: администратор запрашивает информацию о событиях {}:";
+    static String EVENTS_ADMIN_RESPONSE = "\n<==   Ответ: '200 Ok' Запрос выполнен. Результат запроса: {}";
     static String VALIDATION_ERROR = "Ошибка при валидации API запроса";
     static String INVALID_SEARCH_CRITERIA = "Допускается запрашивать либо список, либо диапазон ID пользователей";
     String thisService = this.getClass().getName();
@@ -69,7 +78,7 @@ public class AdminLayerApiController {
     public UserDto addUser(@Valid @RequestBody UserNewDto request) {
         log.info(POST_USER_REQUEST, request.toString());
         var response = ewmService.addUser(request);
-        log.info(CREATED_USER_RESPONSE, response);
+        log.info(USER_CREATED, response);
         return response;
     }
 
@@ -78,7 +87,7 @@ public class AdminLayerApiController {
     public void deleteUser(@Positive(message = POSITIVE) @PathVariable(value = UID) Long uid) {
         log.info(DELETE_USER_REQUEST, uid);
         ewmService.deleteUser(uid);
-        log.info(DELETED_USER_RESPONSE, uid);
+        log.info(USER_DELETED, uid);
     }
 
     @ResponseStatus(HttpStatus.OK)
@@ -90,7 +99,7 @@ public class AdminLayerApiController {
     ) {
         log.info(GET_USERS_REQUEST, pageFrom, pageSize, ids);
         if ((ids != null && ids.length > 0) && (pageFrom != null || pageSize != null)) {
-            throw new AppRequestValidateException(thisService, VALIDATION_ERROR, INVALID_SEARCH_CRITERIA);
+            throw new EwmAppRequestValidateException(thisService, VALIDATION_ERROR, INVALID_SEARCH_CRITERIA);
         } else if (ids == null || ids.length == 0) {
                 if (pageFrom == null) {
                     pageFrom = FROM_DEFAULT;
@@ -107,30 +116,55 @@ public class AdminLayerApiController {
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/categories")
     public CategoryDto addCategory(@Valid @RequestBody CategoryNewDto categoryNewDto) {
-        log.info(POST_CATEGORY_REQUEST, categoryNewDto.toString());
+        log.info(CREATE_CATEGORY_REQUEST, categoryNewDto.toString());
         var categoryDto = ewmService.addCategory(categoryNewDto);
-        log.info(CREATED_CATEGORY_RESPONSE, categoryDto);
+        log.info(CATEGORY_CREATED, categoryDto);
         return categoryDto;
     }
 
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/categories/{cat-id}")
-    public void deleteCategoryById(@Positive(message = POSITIVE) @PathVariable(value = CID) Long cId) {
+    public void deleteCategory(@Positive(message = POSITIVE) @PathVariable(value = CID) Long cId) {
         log.info(DELETE_CATEGORY_REQUEST, cId);
         ewmService.deleteCategoryById(cId);
-        log.info(DELETED_CATEGORY_RESPONSE, cId);
+        log.info(CATEGORY_DELETED, cId);
     }
 
     @ResponseStatus(HttpStatus.OK)
     @PatchMapping("/categories/{cat-id}")
-    public CategoryDto patchCategoryById(
+    public CategoryDto updateCategory(
             @Valid @RequestBody CategoryNewDto categoryNewDto,
             @Positive(message = POSITIVE) @PathVariable(value = CID) Long cId
     ) {
-        log.info(PATCH_CATEGORY_REQUEST, cId, categoryNewDto.toString());
-        var categoryDto = ewmService.patchCategoryById(cId, categoryNewDto);
-        log.info(PATCH_CATEGORY_RESPONSE, categoryDto);
+        log.info(UPDATE_CATEGORY_REQUEST, cId, categoryNewDto.toString());
+        var categoryDto = ewmService.updateCategoryById(cId, categoryNewDto);
+        log.info(UPDATE_CATEGORY_CREATED, categoryDto);
         return categoryDto;
     }
+
+    @ResponseStatus(HttpStatus.OK)
+    @PatchMapping("/events/{event-id}")
+    public EventFullDto updateEvent(
+            @Positive(message = POSITIVE) @PathVariable(value = EID) Long eId,
+            @RequestBody UpdateEventAdminRequestDto updateDto
+    ) {
+        log.info(ADMIN_UPDATE_REQUEST, eId, updateDto);
+        var response = ewmService.updateEventById(eId, updateDto);
+        log.info(ADMIN_UPDATE_CREATED, eId, response);
+        return response;
+    }
+
+    @ResponseStatus(HttpStatus.OK)
+    @GetMapping("/events")
+    public List<EventFullDto> findEvents(HttpServletRequest request, @RequestParam Map<String, String> params) {
+        log.info(EVENTS_ADMIN_REQUEST, params);
+        var response = ewmService.findAllStats(request, params);
+        log.info(EVENTS_ADMIN_RESPONSE, response);
+        return response;
+    }
+
+//    @ResponseStatus(HttpStatus.CREATED)
+//    @GetMapping("/compilations")
+//    public
 
 }

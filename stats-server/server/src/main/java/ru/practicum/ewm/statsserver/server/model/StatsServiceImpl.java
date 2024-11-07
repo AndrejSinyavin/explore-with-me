@@ -29,6 +29,12 @@ public class StatsServiceImpl implements StatsService {
     @Override
     public void add(EndpointHitEntity endpointHitEntity) {
         try {
+            var hitIsPresent = statsRepository.existsByUriAndIp(endpointHitEntity.getUri(), endpointHitEntity.getIp());
+            if (hitIsPresent) {
+                throw new StatsAppAcceptedException(
+                        this.toString(), "", ""
+                );
+            }
             statsRepository.save(endpointHitEntity);
         } catch (Exception e) {
             throw new InternalServiceException(

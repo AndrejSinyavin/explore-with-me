@@ -2,7 +2,7 @@ package ru.practicum.ewm.ewmservice.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import ru.practicum.ewm.ewmservice.entity.EntityCategory;
+import ru.practicum.ewm.ewmservice.entity.CategoryEntity;
 
 import java.io.Serializable;
 
@@ -14,10 +14,9 @@ public record CategoryNewDto(
         @Size(min = 1, max = 50, message = "Размер сообщения не соответствует заданному диапазону")
         String name
 ) implements Serializable {
-        public EntityCategory toEntity() {
-                var category = new EntityCategory();
+        public CategoryEntity toEntity() {
+                var category = new CategoryEntity();
                 category.setName(name);
-                category.setId(0L);
                 return category;
         }
 }

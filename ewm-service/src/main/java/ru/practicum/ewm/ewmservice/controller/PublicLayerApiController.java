@@ -1,11 +1,14 @@
 package ru.practicum.ewm.ewmservice.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,30 +16,49 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
 import ru.practicum.ewm.ewmservice.dto.CategoryDto;
+import ru.practicum.ewm.ewmservice.dto.EventFullDto;
+import ru.practicum.ewm.ewmservice.dto.EventShortDto;
 import ru.practicum.ewm.ewmservice.service.EwmService;
+import ru.practicum.ewm.statsserver.client.StatsClientImpl;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Validated
-@RequiredArgsConstructor
+@RequiredArgsConstructor(onConstructor = @__(@Autowired))
+@Import({StatsClientImpl.class, RestTemplate.class})
 @RestController
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class PublicLayerApiController {
     static final String POSITIVE = "Эта величина может быть только положительным значением";
     static final String NOT_NEGATIVE = "Эта величина не может быть отрицательным значением";
     static final String CID = "cat-id";
+    static final String EID = "event-id";
     static final String SIZE = "size";
     static final String FROM = "from";
     static final String FROM_DEFAULT = "0";
     static final String SIZE_DEFAULT = "10";
+    static String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
     static String GET_CATEGORY_REQUEST = "\n==>   Запрос GET: получить категорию события по ID {} ";
     static String GET_CATEGORIES_REQUEST =
             "\n==>   Запрос GET: получить список категорий в диапазоне pageFrom {} pageSize {}";
     static String GET_CATEGORY_RESPONSE = "\n<==   Ответ: '200 Ok' Запрос выполнен - запрошенный пользователь: {}";
     static String GET_CATEGORIES_RESPONSE = "\n<==   Ответ: '200 Ok' Запрос выполнен - запрошенные категории: {}";
+    static String GET_PUBLISHED_EVENT = "\n==>   Запрос GET: получить подробную информацию о событии ID {}";
+    static String PUBLISHED_EVENT = "\n<==   Ответ: '200 Ok' Запрос выполнен - событие: {}";
+    static String SEND_ACTION_TO_STAT_SERVICE =
+            "\n<==    Информация о просмотре события отправлена сервису статистики: {}";
+    static String GET_EVENTS_BY_CRITERIA = "\n==>   Запрос GET: получить список опубликованных событий по критериям {}";
+    static String EVENTS_BY_CRITERIA = "\n<==   Ответ: '200 Ok' Запрос выполнен - список событий: {}";
 
+    String thisService = this.getClass().getName();
+    StatsClientImpl statsClient;
     EwmService ewmService;
 
     @ResponseStatus(HttpStatus.OK)
@@ -59,6 +81,42 @@ public class PublicLayerApiController {
         var response = ewmService.getCategories(pageFrom, pageSize);
         log.info(GET_CATEGORIES_RESPONSE, response);
         return response;
+    }
+
+    @ResponseStatus(HttpStatus.OK)
+    @GetMapping("/events/{event-id}")
+    public EventFullDto getEvent(
+            @Positive(message = POSITIVE) @PathVariable(value = EID) Long eId,
+            HttpServletRequest request
+    ) {
+        log.info(GET_PUBLISHED_EVENT, eId);
+        var response = ewmService.getFullEvent(eId);
+        log.info(PUBLISHED_EVENT, response);
+        String endpointPath = request.getRequestURI();
+        String ip = request.getRemoteAddr();
+        if (logAction(thisService, endpointPath, ip)) {
+            ewmService.addReview(eId);
+        };
+        return response;
+    }
+
+    @ResponseStatus(HttpStatus.OK)
+    @GetMapping("/events")
+    public List<EventShortDto> getEvents(HttpServletRequest request, @RequestParam Map<String, String> params
+    ) {
+        log.info(GET_EVENTS_BY_CRITERIA, params);
+        var response = ewmService.getEventsByCriteria(request, params);
+        log.info(EVENTS_BY_CRITERIA, response);
+        return response;
+    }
+
+    private Boolean logAction(String service, String endpointPath, String ip) {
+        log.info(SEND_ACTION_TO_STAT_SERVICE);
+        return statsClient.hit(
+                service,
+                endpointPath,
+                ip,
+                LocalDateTime.now(Clock.systemUTC()).format(DateTimeFormatter.ofPattern(DATE_TIME_PATTERN)));
     }
 
 }

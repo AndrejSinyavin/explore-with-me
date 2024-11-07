@@ -17,22 +17,22 @@ import ru.practicum.ewm.ewmservice.dto.LocationDto;
 @Setter
 @Entity
 @Table(name = "locations", schema = "public")
-public class EntityEventLocation {
+public class EventLocationEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", nullable = false)
+    @Column(name = "id")
     private Long id;
 
     @NotNull
-    @Column(name = "lat", nullable = false)
+    @Column(name = "lat")
     private Float lat;
 
     @NotNull
-    @Column(name = "lon", nullable = false)
+    @Column(name = "lon")
     private Float lon;
 
     @OneToOne(mappedBy = "location", cascade = CascadeType.ALL, orphanRemoval = true)
-    private EntityEvent events;
+    private EventEntity events;
 
     public LocationDto toDto() {
         return new LocationDto(lat, lon);

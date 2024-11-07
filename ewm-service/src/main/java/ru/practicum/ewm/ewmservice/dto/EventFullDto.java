@@ -1,9 +1,11 @@
 package ru.practicum.ewm.ewmservice.dto;
 
+import ru.practicum.ewm.ewmservice.entity.EventEntity;
+
 import java.io.Serializable;
 
 /**
- * DTO for {@link ru.practicum.ewm.ewmservice.entity.EntityEvent}
+ * DTO for {@link EventEntity}
  */
 public record EventFullDto(
         Long id,

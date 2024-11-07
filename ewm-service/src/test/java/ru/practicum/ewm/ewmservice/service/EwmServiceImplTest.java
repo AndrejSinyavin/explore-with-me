@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import ru.practicum.ewm.ewmservice.dto.UserNewDto;
-import ru.practicum.ewm.ewmservice.service.ApiUser.SearchCriteria;
+import ru.practicum.ewm.ewmservice.service.UserApiService.SearchCriteria;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;

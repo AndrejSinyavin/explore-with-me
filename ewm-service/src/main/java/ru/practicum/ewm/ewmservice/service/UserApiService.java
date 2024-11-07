@@ -5,7 +5,7 @@ import ru.practicum.ewm.ewmservice.dto.UserDto;
 
 import java.util.List;
 
-public interface ApiUser {
+public interface UserApiService {
     UserDto addUser(UserNewDto userNewDto);
 
     List<UserDto> getUsers(SearchCriteria searchCriteria);

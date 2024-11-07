@@ -8,6 +8,7 @@ import ru.practicum.ewm.statsserver.commondto.ViewStatsDto;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * JPA-репозиторий сервиса работы со статистикой
@@ -56,4 +57,7 @@ public interface StatsRepository extends JpaRepository<EndpointHitEntity, Long> 
             @Param("begin") Instant begin,
             @Param("end") Instant end);
 
+    Optional<EndpointHitEntity> findFirstByUriAndIp(String uri, String ip);
+
+    boolean existsByUriAndIp(String uri, String ip);
 }

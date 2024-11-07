@@ -8,6 +8,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import ru.practicum.ewm.statsserver.server.model.StatsAppAcceptedException;
 
 import java.util.Arrays;
 
@@ -57,6 +58,18 @@ public class AppExceptionHandlers {
                 INTERNAL_SERVER_ERROR,
                 SERVER_ERROR.concat(SEPARATOR).concat(exception.getLocalizedMessage())
         );
+    }
+
+    /**
+     * Обработчик исключений для ответов StatsAppAcceptedException
+     *
+     * @param ignoredException исключение
+     * @return ответ
+     */
+    @ExceptionHandler({StatsAppAcceptedException.class})
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public ErrorResponse handleAcceptedResponse(final StatsAppAcceptedException ignoredException) {
+        return new ErrorResponse("202 Accepted", "");
     }
 
     /**

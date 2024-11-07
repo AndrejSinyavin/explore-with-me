@@ -26,10 +26,10 @@ import java.util.Set;
         @UniqueConstraint(name = "uc_users_email", columnNames = {"email"})
 })
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class EntityUser {
+public class UserEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", nullable = false)
+    @Column(name = "id")
     Long id;
 
     @Column(name = "email", nullable = false, length = 254)
@@ -40,7 +40,7 @@ public class EntityUser {
 
     @OneToMany(mappedBy = "initiator",
             cascade = {CascadeType.ALL}, orphanRemoval = true)
-    private Set<EntityEvent> entityEvents = new LinkedHashSet<>();
+    Set<EventEntity> userEventEntities = new LinkedHashSet<>();
 
     public UserDto toUserDto() {
         return new UserDto(id, email, name);

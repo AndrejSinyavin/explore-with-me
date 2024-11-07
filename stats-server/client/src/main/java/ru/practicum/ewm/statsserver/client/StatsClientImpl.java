@@ -29,16 +29,16 @@ public class StatsClientImpl {
             ResponseEntity<EndpointHitCreateDto> responseEntity =
                     restTemplate.postForEntity(
                             STATS_SERVICE_URI.concat("hit"), hitCreateDto, EndpointHitCreateDto.class);
-            var status = true;
-            if (!responseEntity.getStatusCode().isSameCodeAs(HttpStatus.CREATED)) {
-                log.info(" Регистрация запроса пользователя не выполнена, ошибка в работе сервиса статистики! {}",
-                        this.getClass().getName());
-                status = false;
+            if (responseEntity.getStatusCode().equals(HttpStatus.CREATED)) {
+                return true;
+            } else if (responseEntity.getStatusCode().equals(HttpStatus.ACCEPTED)) {
+                return false;
+            } else {
+                throw new RestClientException("От сервиса статистики получен ответ, не соответсвующий протоколу");
             }
-            return status;
         } catch (RestClientException e) {
             log.info(this.getClass().getName()
-                .concat(" Регистрация запроса пользователя не выполнена, ошибка клиента при отправке статистики!"));
+                .concat(" Ошибка клиента при отправке статистики!"));
             return false;
         }
     }

@@ -8,7 +8,7 @@ import lombok.Getter;
  */
 @AllArgsConstructor
 @Getter
-public abstract class AppException extends RuntimeException {
+public abstract class EwmAppException extends RuntimeException {
     private final String source;
     private final String error;
     private final String message;

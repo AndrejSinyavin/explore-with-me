@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @RestControllerAdvice
-public class AppRestControllerAdvice {
+public class EwmAppRestControllerAdvice {
     static String SPLITTER = ". ";
     static String COLON = ": ";
     static String RESPONSE = "\n<==   Ответ: ";
@@ -47,15 +47,15 @@ public class AppRestControllerAdvice {
      * Обработчик исключений при сбое сервиса.
      *
      * @param exception исключение, вызвавшее сбой сервиса
-     * @return {@link AppErrorResponse} с описанием ошибки и вероятных причинах
+     * @return {@link EwmAppErrorResponse} с описанием ошибки и вероятных причинах
      */
-    @ExceptionHandler({AppInternalServiceException.class, RuntimeException.class})
+    @ExceptionHandler({EwmAppInternalServiceException.class, RuntimeException.class})
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public AppErrorResponse handleInternalServerFailureResponse(final RuntimeException exception) {
+    public EwmAppErrorResponse handleInternalServerFailureResponse(final RuntimeException exception) {
         var stackTrace = exception.getStackTrace();
         var errors = new ArrayList<String>();
-        if (exception.getClass().getSimpleName().equals(AppInternalServiceException.class.getSimpleName())) {
-            var appException = (AppInternalServiceException)exception;
+        if (exception.getClass().getSimpleName().equals(EwmAppInternalServiceException.class.getSimpleName())) {
+            var appException = (EwmAppInternalServiceException)exception;
             errors.add(appException.getSource());
         } else {
             var name = exception.getClass().getCanonicalName();
@@ -67,7 +67,7 @@ public class AppRestControllerAdvice {
         }
         log.error(RESPONSE.concat(INTERNAL_SERVER_ERROR).concat(SPLITTER).concat(SERVER_FAILURE)
                 .concat(Arrays.toString(stackTrace)));
-        return new AppErrorResponse(
+        return new EwmAppErrorResponse(
                 INTERNAL_SERVER_ERROR,
                 SERVER_FAILURE,
                 exception.getLocalizedMessage(),
@@ -80,15 +80,15 @@ public class AppRestControllerAdvice {
      * Обработчик исключений для валидации заданных ограничений параметров для API запросов.
      *
      * @param exception исключение
-     * @return {@link AppErrorResponse} с описанием ошибки и вероятных причинах
+     * @return {@link EwmAppErrorResponse} с описанием ошибки и вероятных причинах
      */
     @ExceptionHandler(ConstraintViolationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public AppErrorResponse handleValidationErrorResponse(final ConstraintViolationException exception) {
+    public EwmAppErrorResponse handleValidationErrorResponse(final ConstraintViolationException exception) {
         var stackTrace = exception.getStackTrace();
         log.warn(RESPONSE.concat(BAD_REQUEST).concat(SPLITTER).concat(INVALID_PARAMETERS)
                 .concat(Arrays.toString(stackTrace)));
-        return new AppErrorResponse(
+        return new EwmAppErrorResponse(
                 BAD_REQUEST,
                 INVALID_PARAMETERS,
                 exception.getLocalizedMessage(),
@@ -100,11 +100,11 @@ public class AppRestControllerAdvice {
      * Обработчик исключений для валидации переданных из API параметров запросов.
      *
      * @param exception исключение
-     * @return {@link AppErrorResponse} с описанием ошибки и вероятных причинах
+     * @return {@link EwmAppErrorResponse} с описанием ошибки и вероятных причинах
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public AppErrorResponse handleAnnotationValidateErrorResponse(final MethodArgumentNotValidException exception) {
+    public EwmAppErrorResponse handleAnnotationValidateErrorResponse(final MethodArgumentNotValidException exception) {
         var message = new ArrayList<String>();
         exception.getBindingResult()
                 .getAllErrors()
@@ -119,7 +119,7 @@ public class AppRestControllerAdvice {
                 .toList();
         log.warn(RESPONSE.concat(BAD_REQUEST).concat(SPLITTER).concat(INVALID_PARAMETERS)
                 .concat(stackTraceInfo.toString()));
-        return new AppErrorResponse(
+        return new EwmAppErrorResponse(
                 BAD_REQUEST,
                 INVALID_PARAMETERS,
                 message.toString(),
@@ -131,16 +131,16 @@ public class AppRestControllerAdvice {
      * Обработчик исключений при получении запроса с несоответствующим форматом тела, пути или заголовков запроса.
      *
      * @param exception исключение
-     * @return {@link AppErrorResponse} с описанием ошибки и вероятных причинах
+     * @return {@link EwmAppErrorResponse} с описанием ошибки и вероятных причинах
      */
     @ExceptionHandler({HttpMessageNotReadableException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public AppErrorResponse handleHttpMessageNotReadableExceptionResponse(
+    public EwmAppErrorResponse handleHttpMessageNotReadableExceptionResponse(
             final HttpMessageNotReadableException exception) {
         var stackTrace = exception.getStackTrace();
         log.warn(RESPONSE.concat(BAD_REQUEST).concat(SPLITTER).concat(NOT_READABLE_BODY)
                 .concat(Arrays.toString(stackTrace)));
-        return new AppErrorResponse(
+        return new EwmAppErrorResponse(
                 BAD_REQUEST,
                 NOT_READABLE_BODY,
                 exception.getLocalizedMessage(),
@@ -152,16 +152,16 @@ public class AppRestControllerAdvice {
      * Обработчик исключений для дополнительной валидации API запросов приложением.
      *
      * @param exception исключение
-     * @return {@link AppErrorResponse} с описанием ошибки и вероятных причинах
+     * @return {@link EwmAppErrorResponse} с описанием ошибки и вероятных причинах
      */
-    @ExceptionHandler({AppRequestValidateException.class})
+    @ExceptionHandler({EwmAppRequestValidateException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public AppErrorResponse handleValidationErrorResponse(final AppRequestValidateException exception) {
+    public EwmAppErrorResponse handleValidationErrorResponse(final EwmAppRequestValidateException exception) {
         var stackTrace = exception.getStackTrace();
         log.warn(RESPONSE.concat(BAD_REQUEST).concat(SPLITTER).concat(INVALID_PARAMETERS).concat(SPLITTER)
                 .concat(exception.getError()).concat(SPLITTER).concat(exception.getMessage()).concat(SPLITTER)
                 .concat(Arrays.toString(stackTrace)));
-        return new AppErrorResponse(
+        return new EwmAppErrorResponse(
                 BAD_REQUEST,
                 INVALID_PARAMETERS,
                 exception.getError().concat(SPLITTER).concat(exception.getMessage()),
@@ -173,16 +173,16 @@ public class AppRestControllerAdvice {
      * Обработчик исключений при операциях, нарушающих целостность/стабильность данных или репозитория.
      *
      * @param exception исключение
-     * @return {@link AppErrorResponse} с описанием ошибки и вероятных причинах
+     * @return {@link EwmAppErrorResponse} с описанием ошибки и вероятных причинах
      */
     @ExceptionHandler({DataIntegrityViolationException.class})
     @ResponseStatus(HttpStatus.CONFLICT)
-    public AppErrorResponse handleDataIntegrityViolationResponse(final DataIntegrityViolationException exception) {
+    public EwmAppErrorResponse handleDataIntegrityViolationResponse(final DataIntegrityViolationException exception) {
         var stackTrace = exception.getStackTrace();
         log.warn(RESPONSE.concat(CONFLICT).concat(SPLITTER).concat(REQUEST_WAS_REFUSED).concat(SPLITTER)
                 .concat(exception.getMostSpecificCause().getLocalizedMessage()).concat(SPLITTER)
                 .concat(exception.getMessage()).concat(SPLITTER).concat(Arrays.toString(stackTrace)));
-        return new AppErrorResponse(
+        return new EwmAppErrorResponse(
                 CONFLICT,
                 REQUEST_WAS_REFUSED,
                 exception.getMostSpecificCause().getLocalizedMessage(),
@@ -194,14 +194,14 @@ public class AppRestControllerAdvice {
      * Обработчик исключений при отсутствии запрашиваемых данных.
      *
      * @param exception исключение
-     * @return {@link AppErrorResponse} с описанием ошибки и вероятных причинах
+     * @return {@link EwmAppErrorResponse} с описанием ошибки и вероятных причинах
      */
-    @ExceptionHandler({AppEntityNotFoundException.class})
+    @ExceptionHandler({EwmAppEntityNotFoundException.class})
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public AppErrorResponse handleEntityNotFoundResponse(final AppEntityNotFoundException exception) {
+    public EwmAppErrorResponse handleEntityNotFoundResponse(final EwmAppEntityNotFoundException exception) {
         log.warn(RESPONSE.concat(NOT_FOUND).concat(SPLITTER).concat(exception.getError()).concat(SPLITTER)
                 .concat(exception.getMessage()));
-        return new AppErrorResponse(
+        return new EwmAppErrorResponse(
                 NOT_FOUND,
                 exception.getError(),
                 exception.getMessage(),
@@ -213,15 +213,15 @@ public class AppRestControllerAdvice {
      * Обработчик исключений при возникновении ситуаций невозможности создания или обработки данных.
      *
      * @param exception исключение
-     * @return {@link AppErrorResponse} с описанием ошибки и вероятных причинах
+     * @return {@link EwmAppErrorResponse} с описанием ошибки и вероятных причинах
      */
-    @ExceptionHandler({AppImproperDataException.class})
+    @ExceptionHandler({EwmAppUnsuitableDatasetException.class})
     @ResponseStatus(HttpStatus.CONFLICT)
-    public AppErrorResponse handleIncorrectDataResponse(final AppImproperDataException exception) {
+    public EwmAppErrorResponse handleIncorrectDataResponse(final EwmAppUnsuitableDatasetException exception) {
         log.warn(RESPONSE.concat(CONFLICT).concat(SPLITTER).concat(exception.getError()).concat(SPLITTER)
                 .concat(exception.getMessage()));
-        return new AppErrorResponse(
-                NOT_FOUND,
+        return new EwmAppErrorResponse(
+                CONFLICT,
                 exception.getError(),
                 exception.getMessage(),
                 timeStamp()
@@ -232,13 +232,13 @@ public class AppRestControllerAdvice {
      * Обработчик исключений при запросах на некорректные/нереализованные эндпоинты.
      *
      * @param exception исключение
-     * @return {@link AppErrorResponse} с описанием ошибки и вероятных причинах
+     * @return {@link EwmAppErrorResponse} с описанием ошибки и вероятных причинах
      */
     @ExceptionHandler({NoResourceFoundException.class})
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public AppErrorResponse handleEndpointErrorResponse(final NoResourceFoundException exception) {
+    public EwmAppErrorResponse handleEndpointErrorResponse(final NoResourceFoundException exception) {
         log.warn(RESPONSE.concat(NOT_FOUND).concat(SPLITTER).concat(ENDPOINT_ERROR));
-        return new AppErrorResponse(
+        return new EwmAppErrorResponse(
                 NOT_FOUND,
                 ENDPOINT_ERROR,
                 exception.getLocalizedMessage(),
