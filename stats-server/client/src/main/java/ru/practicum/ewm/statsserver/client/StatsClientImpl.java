@@ -3,6 +3,7 @@ package ru.practicum.ewm.statsserver.client;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -20,7 +21,8 @@ import java.util.Optional;
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 @Slf4j
 public class StatsClientImpl {
-    private static final String STATS_SERVICE_URI = "http://localhost:9090/";
+    @Value("${stats-server.url}")
+    private String statServerUrl;
     private final RestTemplate restTemplate;
 
     public Boolean hit(String app, String uri, String ip, String timestamp) {
@@ -28,7 +30,7 @@ public class StatsClientImpl {
             var hitCreateDto = new EndpointHitCreateDto(app, uri, ip, timestamp);
             ResponseEntity<EndpointHitCreateDto> responseEntity =
                     restTemplate.postForEntity(
-                            STATS_SERVICE_URI.concat("hit"), hitCreateDto, EndpointHitCreateDto.class);
+                            statServerUrl.concat("/hit"), hitCreateDto, EndpointHitCreateDto.class);
             if (responseEntity.getStatusCode().equals(HttpStatus.CREATED)) {
                 return true;
             } else if (responseEntity.getStatusCode().equals(HttpStatus.ACCEPTED)) {
@@ -45,7 +47,7 @@ public class StatsClientImpl {
 
     public Optional<List<ViewStatsDto>> getStats() {
         try {
-            ViewStatsDto[] stats = restTemplate.getForObject(STATS_SERVICE_URI.concat("stats"), ViewStatsDto[].class);
+            ViewStatsDto[] stats = restTemplate.getForObject(statServerUrl.concat("/stats"), ViewStatsDto[].class);
             if (stats == null) {
                 log.warn(this.getClass().getName()
                         .concat(" Ошибка сервера: cтатистика отсутствует!"));
@@ -58,6 +60,10 @@ public class StatsClientImpl {
                     .concat(" Ошибка клиента при отправке запроса на получение статистики!"));
             return Optional.empty();
         }
+    }
+
+    public void setStatServerUrl(String statServerUrl) {
+        this.statServerUrl = statServerUrl;
     }
 
 }

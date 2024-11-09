@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS public.participation_request
     requester BIGINT,
     created   TIMESTAMP WITHOUT TIME ZONE,
     CONSTRAINT pk_participation_request PRIMARY KEY (id),
-    CONSTRAINT uc_participationrequest_entity UNIQUE (event, requester),
+    CONSTRAINT uc_participation_request_entity UNIQUE (event, requester),
     CONSTRAINT fk_participation_request_on_event FOREIGN KEY (event)
         REFERENCES public.events (id) ON DELETE CASCADE,
     CONSTRAINT fk_participation_request_on_requester FOREIGN KEY (requester)

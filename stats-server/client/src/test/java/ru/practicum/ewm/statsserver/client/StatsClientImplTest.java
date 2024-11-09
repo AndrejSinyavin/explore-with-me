@@ -1,5 +1,6 @@
 package ru.practicum.ewm.statsserver.client;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,6 +37,11 @@ class StatsClientImplTest {
 
     @InjectMocks
     private StatsClientImpl statsClient;
+
+    @BeforeEach
+    void init() {
+        statsClient.setStatServerUrl("http://localhost:9090");
+    }
 
     @Test
     @DisplayName("Клиент отправил, а сервер статистики успешно записал информацию")
