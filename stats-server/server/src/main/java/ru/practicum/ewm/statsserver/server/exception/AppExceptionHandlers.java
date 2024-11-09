@@ -70,7 +70,9 @@ public class AppExceptionHandlers {
     public ErrorResponse handleServerInternalErrorResponse(final AppBadRequestException exception) {
         log.error(LOG_RESPONSE_THREE, BAD_REQUEST, exception.getError(), exception.getMessage());
         return new ErrorResponse(
-                BAD_REQUEST, SERVER_ERROR.concat(SEPARATOR).concat(exception.getLocalizedMessage())
+                BAD_REQUEST,
+                SERVER_ERROR.concat(SEPARATOR).concat(
+                        exception.getError().concat(SEPARATOR).concat(exception.getMessage()))
         );
     }
 

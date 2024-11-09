@@ -72,7 +72,7 @@ public class StatsServiceImpl implements StatsService {
             var end = Instant.from(LocalDateTime
                     .parse(endArg, DateTimeFormatter.ofPattern(DATE_TIME_PATTERN))
                     .atZone(ZoneId.of("GMT0")));
-            if (begin.isAfter(end) || end.isAfter(Instant.now(Clock.systemUTC()))) {
+            if (begin.isAfter(end)) {
                 throw new AppBadRequestException(
                         this.getClass().getName(),
                         "Неверные данные в запросе",
@@ -92,7 +92,7 @@ public class StatsServiceImpl implements StatsService {
             }
             stats.sort(Comparator.comparingLong(ViewStatsDto::hits).reversed());
             return stats;
-        } catch (Exception exception) {
+        } catch (RuntimeException exception) {
             throw new AppBadRequestException(
                     this.getClass().getName(),
                     "Неверные данные в запросе",
