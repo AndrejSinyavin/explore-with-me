@@ -22,8 +22,11 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import ru.practicum.ewm.ewmservice.dto.CategoryDto;
 import ru.practicum.ewm.ewmservice.dto.CategoryNewDto;
+import ru.practicum.ewm.ewmservice.dto.CompilationDto;
+import ru.practicum.ewm.ewmservice.dto.CompilationNewDto;
+import ru.practicum.ewm.ewmservice.dto.CompilationUpdateRequestDto;
 import ru.practicum.ewm.ewmservice.dto.EventFullDto;
-import ru.practicum.ewm.ewmservice.dto.UpdateEventAdminRequestDto;
+import ru.practicum.ewm.ewmservice.dto.EventUpdateByAdminRequestDto;
 import ru.practicum.ewm.ewmservice.dto.UserNewDto;
 import ru.practicum.ewm.ewmservice.dto.UserDto;
 import ru.practicum.ewm.ewmservice.exception.EwmAppRequestValidateException;
@@ -46,6 +49,7 @@ public class AdminLayerApiController {
     static final String CID = "cat-id";
     static final String UID = "user-id";
     static final String EID = "event-id";
+    static final String CPID = "comp-id";
     static final String SIZE = "size";
     static final String FROM = "from";
     static Integer FROM_DEFAULT = 0;
@@ -146,10 +150,10 @@ public class AdminLayerApiController {
     @PatchMapping("/events/{event-id}")
     public EventFullDto updateEvent(
             @Positive(message = POSITIVE) @PathVariable(value = EID) Long eId,
-            @RequestBody UpdateEventAdminRequestDto updateDto
+            @Valid @RequestBody EventUpdateByAdminRequestDto updateDto
     ) {
         log.info(ADMIN_UPDATE_REQUEST, eId, updateDto);
-        var response = ewmService.updateEventById(eId, updateDto);
+        var response = ewmService.adminUpdateEvent(eId, updateDto);
         log.info(ADMIN_UPDATE_CREATED, eId, response);
         return response;
     }
@@ -163,8 +167,24 @@ public class AdminLayerApiController {
         return response;
     }
 
-//    @ResponseStatus(HttpStatus.CREATED)
-//    @GetMapping("/compilations")
-//    public
+    @ResponseStatus(HttpStatus.CREATED)
+    @PostMapping("/compilations")
+    public CompilationDto addCompilation(@Valid @RequestBody CompilationNewDto dto) {
+        return ewmService.addCompilation(dto);
+    }
+
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @DeleteMapping("/compilations/{comp-id}")
+    public void deleteCompilation(@Positive(message = POSITIVE) @PathVariable(CPID) Long cpId) {
+        ewmService.deleteCompilation(cpId);
+    }
+
+    @ResponseStatus(HttpStatus.OK)
+    @PatchMapping("/compilations/{comp-id}")
+    public CompilationDto updateCompilation(
+            @Positive(message = POSITIVE) @PathVariable(CPID) Long cpId,
+            @Valid @RequestBody CompilationUpdateRequestDto dto) {
+        return ewmService.updateCompilation(cpId, dto);
+    }
 
 }

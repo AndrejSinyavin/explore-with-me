@@ -18,8 +18,10 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 import ru.practicum.ewm.ewmservice.dto.CategoryDto;
+import ru.practicum.ewm.ewmservice.dto.CompilationDto;
 import ru.practicum.ewm.ewmservice.dto.EventFullDto;
 import ru.practicum.ewm.ewmservice.dto.EventShortDto;
+import ru.practicum.ewm.ewmservice.exception.EwmAppEntityNotFoundException;
 import ru.practicum.ewm.ewmservice.service.EwmService;
 import ru.practicum.ewm.statsserver.client.StatsClientImpl;
 
@@ -40,10 +42,13 @@ public class PublicLayerApiController {
     static final String NOT_NEGATIVE = "Эта величина не может быть отрицательным значением";
     static final String CID = "cat-id";
     static final String EID = "event-id";
+    static final String CPID = "comp-id";
     static final String SIZE = "size";
     static final String FROM = "from";
     static final String FROM_DEFAULT = "0";
     static final String SIZE_DEFAULT = "10";
+    static String REQUEST_NOT_COMPLETE = "Запрос не выполнен";
+    static String ENTITY_NOT_FOUND = "Сущность не найдена";
     static String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
     static String GET_CATEGORY_REQUEST = "\n==>   Запрос GET: получить категорию события по ID {} ";
     static String GET_CATEGORIES_REQUEST =
@@ -96,7 +101,7 @@ public class PublicLayerApiController {
         String ip = request.getRemoteAddr();
         if (logAction(thisService, endpointPath, ip)) {
             ewmService.addReview(eId);
-        };
+        }
         return response;
     }
 
@@ -117,6 +122,30 @@ public class PublicLayerApiController {
                 endpointPath,
                 ip,
                 LocalDateTime.now(Clock.systemUTC()).format(DateTimeFormatter.ofPattern(DATE_TIME_PATTERN)));
+    }
+
+    @ResponseStatus(HttpStatus.OK)
+    @GetMapping("/compilations/{comp-id}")
+    public CompilationDto getCompilation(
+            @Positive(message = POSITIVE) @PathVariable(value = CPID) Long cpId
+    ) {
+        return ewmService.getCompilationById(cpId)
+                .orElseThrow(() ->
+                        new EwmAppEntityNotFoundException(
+                                REQUEST_NOT_COMPLETE, ENTITY_NOT_FOUND,
+                                "Не найдена компиляция ID ".concat(String.valueOf(cpId))
+                        )
+                );
+    }
+
+    @ResponseStatus(HttpStatus.OK)
+    @GetMapping("/compilations")
+    public List<CompilationDto> getCompilations(
+            @RequestParam(value = "pinned", defaultValue = "false") Boolean pinned,
+            @RequestParam(value = "from", defaultValue = "0") Integer from,
+            @RequestParam(value = "size", defaultValue = "10") Integer size
+    ) {
+        return ewmService.getCompilations(pinned, from, size);
     }
 
 }

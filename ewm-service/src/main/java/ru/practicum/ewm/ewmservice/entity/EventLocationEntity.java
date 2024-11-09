@@ -1,12 +1,10 @@
 package ru.practicum.ewm.ewmservice.entity;
 
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -30,9 +28,6 @@ public class EventLocationEntity {
     @NotNull
     @Column(name = "lon")
     private Float lon;
-
-    @OneToOne(mappedBy = "location", cascade = CascadeType.ALL, orphanRemoval = true)
-    private EventEntity events;
 
     public LocationDto toDto() {
         return new LocationDto(lat, lon);

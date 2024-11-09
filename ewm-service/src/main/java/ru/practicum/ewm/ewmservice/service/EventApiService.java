@@ -7,8 +7,8 @@ import ru.practicum.ewm.ewmservice.dto.EventNewDto;
 import ru.practicum.ewm.ewmservice.dto.EventRequestStatusUpdateRequest;
 import ru.practicum.ewm.ewmservice.dto.EventRequestStatusUpdateResult;
 import ru.practicum.ewm.ewmservice.dto.EventShortDto;
-import ru.practicum.ewm.ewmservice.dto.UpdateEventAdminRequestDto;
-import ru.practicum.ewm.ewmservice.dto.UpdateEventUserRequestDto;
+import ru.practicum.ewm.ewmservice.dto.EventUpdateByAdminRequestDto;
+import ru.practicum.ewm.ewmservice.dto.EventUpdateByUserRequestDto;
 import ru.practicum.ewm.ewmservice.dto.ParticipationRequestDto;
 
 import java.util.List;
@@ -22,11 +22,11 @@ public interface EventApiService {
 
     EventFullDto getEventByIdAndUserId(Long eId, Long uId);
 
-    EventFullDto updateEvent(Long uId, Long eId, @Valid UpdateEventUserRequestDto eventPatchDto);
+    EventFullDto authorUpdateEvent(Long uId, Long eId, @Valid EventUpdateByUserRequestDto eventPatchDto);
 
-    ParticipationRequestDto createRequest(Long uId, Long eId);
+    ParticipationRequestDto createParticipationRequest(Long uId, Long eId);
 
-    EventFullDto updateEventById(Long eId, UpdateEventAdminRequestDto updateDto);
+    EventFullDto adminUpdateEvent(Long eId, EventUpdateByAdminRequestDto updateDto);
 
     EventRequestStatusUpdateResult updateRequestStatuses(
             EventRequestStatusUpdateRequest statuses, Long uId, Long eId);

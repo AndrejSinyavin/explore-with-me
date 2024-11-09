@@ -10,23 +10,29 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.ewmservice.dto.CategoryDto;
 import ru.practicum.ewm.ewmservice.dto.CategoryNewDto;
+import ru.practicum.ewm.ewmservice.dto.CompilationDto;
+import ru.practicum.ewm.ewmservice.dto.CompilationNewDto;
+import ru.practicum.ewm.ewmservice.dto.CompilationUpdateRequestDto;
 import ru.practicum.ewm.ewmservice.dto.EventFullDto;
 import ru.practicum.ewm.ewmservice.dto.EventNewDto;
 import ru.practicum.ewm.ewmservice.dto.EventRequestStatusUpdateRequest;
 import ru.practicum.ewm.ewmservice.dto.EventRequestStatusUpdateResult;
 import ru.practicum.ewm.ewmservice.dto.EventShortDto;
-import ru.practicum.ewm.ewmservice.dto.UpdateEventAdminRequestDto;
-import ru.practicum.ewm.ewmservice.dto.UpdateEventUserRequestDto;
+import ru.practicum.ewm.ewmservice.dto.EventUpdateByAdminRequestDto;
+import ru.practicum.ewm.ewmservice.dto.EventUpdateByUserRequestDto;
 import ru.practicum.ewm.ewmservice.dto.LocationDto;
 import ru.practicum.ewm.ewmservice.dto.ParticipationRequestDto;
 import ru.practicum.ewm.ewmservice.dto.UserNewDto;
 import ru.practicum.ewm.ewmservice.dto.UserDto;
 import ru.practicum.ewm.ewmservice.entity.AdminRequestModerationEventState;
 import ru.practicum.ewm.ewmservice.entity.CategoryEntity;
+import ru.practicum.ewm.ewmservice.entity.CompilationEntity;
+import ru.practicum.ewm.ewmservice.entity.CompilationEventRelation;
 import ru.practicum.ewm.ewmservice.entity.EventEntity;
 import ru.practicum.ewm.ewmservice.entity.EventLocationEntity;
 import ru.practicum.ewm.ewmservice.entity.EventState;
@@ -36,8 +42,10 @@ import ru.practicum.ewm.ewmservice.entity.ParticipationRequestState;
 import ru.practicum.ewm.ewmservice.entity.UserEntity;
 import ru.practicum.ewm.ewmservice.exception.EwmAppEntityNotFoundException;
 import ru.practicum.ewm.ewmservice.exception.EwmAppRequestValidateException;
-import ru.practicum.ewm.ewmservice.exception.EwmAppUnsuitableDatasetException;
+import ru.practicum.ewm.ewmservice.exception.EwmAppConflitActionException;
 import ru.practicum.ewm.ewmservice.repository.CategoryRepository;
+import ru.practicum.ewm.ewmservice.repository.CompilationEventRelationRepository;
+import ru.practicum.ewm.ewmservice.repository.CompilationRepository;
 import ru.practicum.ewm.ewmservice.repository.EventLocationRepository;
 import ru.practicum.ewm.ewmservice.repository.EventRepository;
 import ru.practicum.ewm.ewmservice.repository.ParticipationRequestRepository;
@@ -50,10 +58,13 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static java.time.temporal.ChronoUnit.DAYS;
 import static java.time.temporal.ChronoUnit.HOURS;
@@ -61,13 +72,12 @@ import static ru.practicum.ewm.ewmservice.entity.AdminRequestModerationEventStat
 import static ru.practicum.ewm.ewmservice.entity.AdminRequestModerationEventState.REJECT_EVENT;
 import static ru.practicum.ewm.ewmservice.entity.EventState.*;
 import static ru.practicum.ewm.ewmservice.entity.ParticipationRequestState.CONFIRMED;
-import static ru.practicum.ewm.ewmservice.entity.ParticipationRequestState.PENDING;
 import static ru.practicum.ewm.ewmservice.entity.ParticipationRequestState.REJECTED;
 import static ru.practicum.ewm.ewmservice.entity.UserRequestModerationState.CANCEL_REVIEW;
 import static ru.practicum.ewm.ewmservice.entity.UserRequestModerationState.SEND_TO_REVIEW;
 
 @Service
-@Log4j2
+@Slf4j
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class EwmServiceImpl implements EwmService {
@@ -89,8 +99,10 @@ public class EwmServiceImpl implements EwmService {
     CategoryRepository categoryRepository;
     EventLocationRepository eventLocationRepository;
     ParticipationRequestRepository participationRequestRepository;
+    CompilationEventRelationRepository compilationEventRelationRepository;
+    CompilationRepository compilationRepository;
 
-    /**
+    /*
      * @param userNewDto
      * @return
      */
@@ -220,7 +232,11 @@ public class EwmServiceImpl implements EwmService {
         createdEvent.setCreatedOn(Instant.now(Clock.systemUTC()));
         createdEvent.setInitiator(eventCreatorUser);
         createdEvent.setViews(0L);
-        if (newEvent.paid() != null) createdEvent.setPaid(newEvent.paid());
+        if (newEvent.paid() != null) {
+            createdEvent.setPaid(newEvent.paid());
+        } else {
+            createdEvent.setPaid(false);
+        }
         if (newEvent.participantLimit() != null) createdEvent.setParticipantLimit(newEvent.participantLimit());
         if (newEvent.requestModeration() != null) createdEvent.setRequestModeration(newEvent.requestModeration());
         createdEvent.setState(EventState.PENDING);
@@ -255,54 +271,72 @@ public class EwmServiceImpl implements EwmService {
     /**
      * @param uId
      * @param eId
-     * @param modified
+     * @param userRequestToUpdateEvent
      * @return
      */
     @Override
-    public EventFullDto updateEvent(Long uId, Long eId, UpdateEventUserRequestDto modified) {
-        UserRequestModerationState action;
-        try {
-            action = UserRequestModerationState.valueOf(modified.stateAction());
-        } catch (IllegalArgumentException | NullPointerException exception) {
-            throw new EwmAppUnsuitableDatasetException(
-                    thisService, REQUEST_NOT_COMPLETE.concat((SPLITTER)).concat((INVALID_DATA_SET)),
-                    "Запрос на обновление статуса обработки анкеты события отсутствует или не опознан: " +
-                            modified.stateAction()
-            );
+    public EventFullDto authorUpdateEvent(Long uId, Long eId, EventUpdateByUserRequestDto userRequestToUpdateEvent) {
+        UserRequestModerationState action = null;
+        var actionField = userRequestToUpdateEvent.stateAction();
+        if (actionField != null) {
+            try {
+                action = UserRequestModerationState.valueOf(actionField);
+            } catch (IllegalArgumentException exception) {
+                throw new EwmAppConflitActionException(
+                        thisService, REQUEST_NOT_COMPLETE.concat((SPLITTER)).concat((INVALID_DATA_SET)),
+                        "Тип операции для обработки анкеты события отсутствует или не распознан"
+                );
+            }
         }
         var event = getUserEvent(uId, eId);
         var eventState = event.getState();
-        if (action.equals(CANCEL_REVIEW) && eventState.equals(EventState.PENDING)) {
-            event.setState(CANCELED);
-            return eventRepository.save(event).toEventFullDto();
-        } else if (!(action.equals(SEND_TO_REVIEW) && !eventState.equals(PUBLISHED))) {
-            throw new EwmAppUnsuitableDatasetException(
-                    thisService, REQUEST_NOT_COMPLETE.concat((SPLITTER)).concat((CONFLICT)),
-                    "Выполнить эту операцию невозможно по правилам модерации"
-            );
-        }
-        var now = Instant.now(Clock.systemUTC());
-        if (event.getEventDate().isBefore(now.plus(AUTHORS_ACTION_MODERATION_LIMIT, HOURS))) {
-                throw new EwmAppUnsuitableDatasetException(
+        if (CANCEL_REVIEW.equals(action)) {
+            if (eventState.equals(EventState.PENDING)) {
+                event.setState(CANCELED);
+                return eventRepository.save(event).toEventFullDto();
+            } else {
+                throw new EwmAppConflitActionException(
                         thisService, REQUEST_NOT_COMPLETE.concat((SPLITTER)).concat((CONFLICT)),
-                        "Обновить анкету можно, только если она в ожидании модерации или снята с публикации," +
-                        " и до начала предполагаемого события осталось не менее 2 часов."
-                );
-
+                        "Афиша события уже опубликована, или модератор уже вернул ее на доработку");
+            }
+        } else if (SEND_TO_REVIEW.equals(action)) {
+            if (eventState.equals(CANCELED)) {
+                event.setState(EventState.PENDING);
+            } else {
+                throw new EwmAppConflitActionException(
+                        thisService, REQUEST_NOT_COMPLETE.concat((SPLITTER)).concat((CONFLICT)),
+                        "Нельзя отправить на ревью уже опубликованную афишу события, или уже проходящую ревью");
+            }
+        } else if (action == null && eventState.equals(PUBLISHED)) {
+            throw new EwmAppConflitActionException(
+                    thisService, REQUEST_NOT_COMPLETE.concat((SPLITTER)).concat((CONFLICT)),
+                    "Нельзя редактировать уже опубликованную афишу события");
         }
-        Optional.ofNullable(modified.category()).ifPresent(categoryId ->
+        Instant plannedDateTime;
+        String dateTime = userRequestToUpdateEvent.eventDate();
+        if (dateTime != null) {
+            plannedDateTime = toInstantTime(dateTime);
+            var now = Instant.now(Clock.systemUTC());
+            if (plannedDateTime.isBefore(now.plus(AUTHORS_ACTION_MODERATION_LIMIT, HOURS))) {
+                    throw new EwmAppRequestValidateException(
+                            thisService, REQUEST_NOT_COMPLETE.concat((SPLITTER)).concat((INVALID_DATA_SET)),
+                            "Указана неверная дата, она должна быть в будущем, " +
+                            " и до ее начала должно быть не менее 2 часов.");
+            }
+        } else {
+            plannedDateTime = null;
+        }
+        Optional.ofNullable(userRequestToUpdateEvent.category()).ifPresent(categoryId ->
                 event.setCategoryEntity(getCategory(Long.valueOf(categoryId))));
-        Optional.ofNullable(modified.annotation()).ifPresent(event::setAnnotation);
-        Optional.ofNullable(modified.description()).ifPresent(event::setDescription);
-        Optional.ofNullable(modified.eventDate()).ifPresent(eventStart ->
-                event.setEventDate(toInstantTime(eventStart)));
-        Optional.ofNullable(modified.location()).ifPresent(eventLocation ->
-                event.setLocation(createLocation(eventLocation)));
-        Optional.ofNullable(modified.paid()).ifPresent(event::setPaid);
-        Optional.ofNullable(modified.participantLimit()).ifPresent(event::setParticipantLimit);
-        Optional.ofNullable(modified.requestModeration()).ifPresent(event::setRequestModeration);
-        Optional.ofNullable(modified.title()).ifPresent(event::setTitle);
-        event.setState(EventState.PENDING);
+        Optional.ofNullable(userRequestToUpdateEvent.annotation()).ifPresent(event::setAnnotation);
+        Optional.ofNullable(userRequestToUpdateEvent.description()).ifPresent(event::setDescription);
+        Optional.ofNullable(dateTime).ifPresent(eventStart -> event.setEventDate(plannedDateTime));
+        Optional.ofNullable(userRequestToUpdateEvent.location())
+                .ifPresent(eventLocation -> event.setLocation(createLocation(eventLocation)));
+        Optional.ofNullable(userRequestToUpdateEvent.paid()).ifPresent(event::setPaid);
+        Optional.ofNullable(userRequestToUpdateEvent.participantLimit()).ifPresent(event::setParticipantLimit);
+        Optional.ofNullable(userRequestToUpdateEvent.requestModeration()).ifPresent(event::setRequestModeration);
+        Optional.ofNullable(userRequestToUpdateEvent.title()).ifPresent(event::setTitle);
         return eventRepository.save(event).toEventFullDto();
     }
 
@@ -312,55 +346,51 @@ public class EwmServiceImpl implements EwmService {
      * @return
      */
     @Override
-    public ParticipationRequestDto createRequest(Long uId, Long eId) {
+    public ParticipationRequestDto createParticipationRequest(Long uId, Long eId) {
         var user = getUser(uId);
         var isUserEvent = user.getUserEventEntities().stream().map(EventEntity::getId).anyMatch(e -> e.equals(eId));
         if (isUserEvent) {
-            throw new EwmAppUnsuitableDatasetException(
+            throw new EwmAppConflitActionException(
                     thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
                     "Пользователь не может подать заявку на свое же мероприятие"
             );
         }
         var event = getEvent(eId);
         if (!event.getState().equals(PUBLISHED)) {
-            throw new EwmAppUnsuitableDatasetException(
+            throw new EwmAppConflitActionException(
                     thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
                     "Мероприятие недоступно для регистрации, подождите его публикации"
             );
         }
-        var requestStatus = getParticipationRequestState(event);
+        var requestStatus = createParticipationRequestState(event);
         var requestToEvent = new ParticipationRequestEntity();
         requestToEvent.setRequester(user);
         requestToEvent.setStatus(requestStatus);
         requestToEvent.setEvent(event);
         requestToEvent.setCreated(Instant.now(Clock.systemUTC()));
         var response = participationRequestRepository.save(requestToEvent).toDto();
-        updateConfirmedMembersForEvent(eId);
+        updateConfirmedMembersQuantityForEvent(eId);
         return response;
     }
 
-    private ParticipationRequestState getParticipationRequestState(EventEntity event) {
-        var preModerationForMemberIsOn = event.getRequestModeration();
-        var addedMember = event.getConfirmedRequests();
+    private ParticipationRequestState createParticipationRequestState(EventEntity event) {
+        var allAddedMembers = event.getConfirmedRequests();
         var limit = event.getParticipantLimit();
-        var isHaveMemberLimit = limit != 0;
-        if (preModerationForMemberIsOn) {
-            if (isHaveMemberLimit && addedMember >= limit) {
-                throw new EwmAppUnsuitableDatasetException(
-                        thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
-                        "Мероприятие недоступно для регистрации, закончилось количество доступных мест для участников"
-                );
+        var isModerationOn = event.getRequestModeration();
+        if (isModerationOn) {
+            if (limit == 0) {
+                return CONFIRMED;
             } else {
-                return PENDING;
+                return ParticipationRequestState.PENDING;
             }
         } else {
-            if (isHaveMemberLimit && addedMember >= limit) {
-                throw new EwmAppUnsuitableDatasetException(
-                        thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
-                        "На мероприятии больше нет свободных мест"
-                );
+            if (limit == 0 || (allAddedMembers < limit)) {
+                return ParticipationRequestState.CONFIRMED;
             } else {
-                return CONFIRMED;
+                throw new EwmAppConflitActionException(
+                        thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
+                        "На мероприятие нет свободных мест"
+                );
             }
         }
     }
@@ -370,48 +400,52 @@ public class EwmServiceImpl implements EwmService {
      * @param adminActionForEvent
      * @return
      */
+    @Transactional
     @Override
-    public EventFullDto updateEventById(Long eId, UpdateEventAdminRequestDto adminActionForEvent) {
-        AdminRequestModerationEventState adminRequest;
-        try {
-            adminRequest = AdminRequestModerationEventState.valueOf(adminActionForEvent.stateAction());
-        } catch (IllegalArgumentException exception) {
-            throw new EwmAppUnsuitableDatasetException(
-                    thisService, REQUEST_NOT_COMPLETE.concat((SPLITTER)).concat((INVALID_DATA_SET)),
-                    "Неизвестный запрос на обновление статуса обработки анкеты события: "
-            );
+    public EventFullDto adminUpdateEvent(Long eId, EventUpdateByAdminRequestDto adminActionForEvent) {
+        AdminRequestModerationEventState adminRequest = null;
+        var action = adminActionForEvent.stateAction();
+        if (action != null) {
+            try {
+                adminRequest = AdminRequestModerationEventState.valueOf(adminActionForEvent.stateAction());
+            } catch (IllegalArgumentException exception) {
+                throw new EwmAppConflitActionException(
+                        thisService, REQUEST_NOT_COMPLETE.concat((SPLITTER)).concat((INVALID_DATA_SET)),
+                        "Запрос на обновление статуса обработки анкеты события не распознан"
+                );
+            }
         }
         var event = getEvent(eId);
         var now = Instant.now(Clock.systemUTC());
-        if (adminRequest.equals(PUBLISH_EVENT)) {
+        if (PUBLISH_EVENT.equals(adminRequest)) {
             checkActionTimeLimitBeforePublication(
                     now,
                     event.getEventDate(),
                     ADMINS_ACTION_MODERATION_LIMIT);
             if (event.getState().equals(CANCELED)) {
-            throw new EwmAppUnsuitableDatasetException(
+            throw new EwmAppConflitActionException(
                         thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
                         "Невозможно опубликовать афишу события - автор не запрашивал ее публикацию"
                 );
             } else if (event.getState().equals(PUBLISHED)) {
-                throw new EwmAppUnsuitableDatasetException(
+                throw new EwmAppConflitActionException(
                         thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
                         "Невозможно опубликовать афишу события - она уже опубликована"
                 );
             }
-        } else if (adminRequest.equals(REJECT_EVENT)) {
+        } else if (REJECT_EVENT.equals(adminRequest)) {
             if (event.getState().equals(EventState.PENDING)) {
                 event.setState(CANCELED);
                 return eventRepository.save(event).toEventFullDto();
             } else if (event.getState().equals(PUBLISHED)) {
-                throw new EwmAppUnsuitableDatasetException(
+                throw new EwmAppConflitActionException(
                         thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
                         "Невозможно отменить редактирование афиши события - она опубликована," +
                                 " и не было запросов на ее редактирование"
                 );
             }
-        } else {
-            throw new EwmAppUnsuitableDatasetException(
+        } else if (adminRequest != null) {
+            throw new EwmAppConflitActionException(
                     thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(INVALID_DATA_SET),
                     "Данная операция <%s> для администратора недоступна, или еще не реализована"
             );
@@ -420,6 +454,15 @@ public class EwmServiceImpl implements EwmService {
         Optional.ofNullable(adminActionForEvent.description()).ifPresent(event::setDescription);
         Optional.ofNullable(adminActionForEvent.category()).ifPresent(category ->
                 event.setCategoryEntity(getCategory(Long.valueOf(category))));
+        var stringDatetime = adminActionForEvent.eventDate();
+        if (stringDatetime != null && toInstantTime(stringDatetime)
+                .isBefore(Instant.now(Clock.systemUTC()).plus(2, HOURS))
+        ) {
+            throw new EwmAppRequestValidateException(
+                    thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(INVALID_DATA_SET),
+                    "Предполагаемая дата начала события должна быть не ранее 2 часов от момента публикации"
+            );
+        }
         Optional.ofNullable(adminActionForEvent.eventDate()).ifPresent(this::toInstantTime);
         Optional.ofNullable(adminActionForEvent.location()).ifPresent(location ->
                 event.setLocation(createLocation(location)));
@@ -450,7 +493,7 @@ public class EwmServiceImpl implements EwmService {
                 if (requestsIsModerated || (limit != 0)) {
                     var quote = limit - event.getConfirmedRequests();
                     if (quote <= 0) {
-                        throw new EwmAppUnsuitableDatasetException(
+                        throw new EwmAppConflitActionException(
                                 thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
                                 "На мероприятии больше нет свободных мест"
                         );
@@ -458,7 +501,7 @@ public class EwmServiceImpl implements EwmService {
                     var requests = participationRequestRepository
                             .getAllFromRequestTargetList(eId, eventRequests.requestIds());
                     for (var request : requests) {
-                        if (request.getStatus().equals(PENDING)) {
+                        if (request.getStatus().equals(ParticipationRequestState.PENDING)) {
                             if (quote == 0) {
                                 request.setStatus(REJECTED);
                                 rejectedRequests.add(request.toDto());
@@ -471,14 +514,14 @@ public class EwmServiceImpl implements EwmService {
                         }
                     }
                     participationRequestRepository.saveAll(requests);
-                    updateConfirmedMembersForEvent(eId);
+                    updateConfirmedMembersQuantityForEvent(eId);
                 }
             } else if (eventRequests.status().equals(REJECTED.name())) {
                 var requests = participationRequestRepository
                         .getAllFromRequestTargetList(eId, eventRequests.requestIds());
                 for (var request : requests) {
                     if (request.getStatus().equals(CONFIRMED)) {
-                        throw new EwmAppUnsuitableDatasetException(
+                        throw new EwmAppConflitActionException(
                                 thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
                                 "Одна из перечисленных заявок уже одобрена организатором мероприятия, " +
                                         "повторите запрос с корректным списком заявок"
@@ -488,7 +531,7 @@ public class EwmServiceImpl implements EwmService {
                     rejectedRequests.add(request.toDto());
                 }
                 participationRequestRepository.saveAll(requests);
-                updateConfirmedMembersForEvent(eId);
+                updateConfirmedMembersQuantityForEvent(eId);
             } else {
                 throw new EwmAppRequestValidateException(
                         thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(INVALID_DATA_SET),
@@ -498,7 +541,7 @@ public class EwmServiceImpl implements EwmService {
             return new EventRequestStatusUpdateResult(confirmedRequests, rejectedRequests);
     }
 
-    private void updateConfirmedMembersForEvent(Long eId) {
+    private void updateConfirmedMembersQuantityForEvent(Long eId) {
         var sum = participationRequestRepository.countByEvent_IdAndStatus(eId, CONFIRMED);
         eventRepository.updateConfirmedRequestsById(sum, eId);
     }
@@ -520,7 +563,7 @@ public class EwmServiceImpl implements EwmService {
         if (request.getStatus().equals(CONFIRMED)) {
             request.setStatus(ParticipationRequestState.CANCELED);
             request.getEvent().setConfirmedRequests(request.getEvent().getConfirmedRequests() - 1);
-        } else if (request.getStatus().equals(PENDING)) {
+        } else if (request.getStatus().equals(ParticipationRequestState.PENDING)) {
             request.setStatus(ParticipationRequestState.CANCELED);
         } else if (request.getStatus().equals(ParticipationRequestState.CANCELED)) {
             participationRequestRepository.delete(request);
@@ -840,7 +883,7 @@ public class EwmServiceImpl implements EwmService {
             Instant publicationDateTime,
             int limitBeforePublication) {
         if (actionDateTime.isAfter(publicationDateTime.minus(limitBeforePublication, HOURS))) {
-            throw new EwmAppUnsuitableDatasetException(
+            throw new EwmAppRequestValidateException(
                     thisService,
                     REQUEST_NOT_COMPLETE.concat(SPLITTER)
                             .concat(CONFLICT),
@@ -858,4 +901,85 @@ public class EwmServiceImpl implements EwmService {
             );
         }
     }
+
+    /**
+     * @param dto
+     * @return
+     */
+    @Override
+    public CompilationDto addCompilation(CompilationNewDto dto) {
+        return compilationRepository.save(dto.toEntity(eventRepository, compilationEventRelationRepository)).toDto();
+    }
+
+    /**
+     * @param cpId
+     * @return
+     */
+    @Override
+    public Optional<CompilationDto> getCompilationById(Long cpId) {
+        return compilationRepository.findById(cpId).map(CompilationEntity::toDto);
+    }
+
+    /**
+     * @param pinned
+     * @param from
+     * @param size
+     * @return
+     */
+    @Override
+    public List<CompilationDto> getCompilations(Boolean pinned, Integer from, Integer size) {
+        var result = compilationRepository.findAllPinned(pinned, size, from);
+        return result.stream().map(CompilationEntity::toDto).toList();
+    }
+
+    /**
+     * @param cpId
+     */
+    @Override
+    public void deleteCompilation(Long cpId) {
+        if (!compilationRepository.existsById(cpId)) throw new EwmAppEntityNotFoundException(
+                thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(ENTITY_NOT_FOUND),
+                "Подборка не найдена"
+        );
+        compilationRepository.deleteById(cpId);
+    }
+
+    /**
+     * @param cpId
+     * @param dto
+     * @return
+     */
+    @Override
+    public CompilationDto updateCompilation(Long cpId, CompilationUpdateRequestDto dto) {
+        CompilationEntity compilation = compilationRepository.findById(cpId)
+                .orElseThrow(() ->
+                        new EwmAppEntityNotFoundException(
+                                thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(ENTITY_NOT_FOUND),
+                                "Подборка не найдена")
+                );
+        compilation.getEvents().clear();
+        Set<Long> eventsIds = (dto.events() == null) ? new HashSet<>() : dto.events();
+        compilation.setEvents(updateCompilationIEvents(
+                eventsIds, compilation, eventRepository, compilationEventRelationRepository));
+        compilation.setPinned((dto.pinned() == null) ? compilation.getPinned() : dto.pinned());
+        compilation.setTitle((dto.title() == null) ? compilation.getTitle() : dto.title());
+        return compilationRepository.save(compilation).toDto();
+    }
+
+    private Set<CompilationEventRelation> updateCompilationIEvents(
+            Set<Long> eventsIds,
+            CompilationEntity compilationEntity,
+            EventRepository eventRepository,
+            CompilationEventRelationRepository relationRepository) {
+        LinkedHashSet<EventEntity> events = new LinkedHashSet<>(eventRepository.findAllById(eventsIds));
+        var relations = new LinkedHashSet<CompilationEventRelation>();
+        for (var event : events) {
+            var relation = new CompilationEventRelation();
+            relation.setCompilation(compilationEntity);
+            relation.setEvent(event);
+            relations.add(relationRepository.save(relation));
+        }
+        return relations;
+    }
+
 }

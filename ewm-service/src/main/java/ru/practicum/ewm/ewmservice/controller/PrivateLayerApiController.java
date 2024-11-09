@@ -22,7 +22,7 @@ import ru.practicum.ewm.ewmservice.dto.EventFullDto;
 import ru.practicum.ewm.ewmservice.dto.EventNewDto;
 import ru.practicum.ewm.ewmservice.dto.EventRequestStatusUpdateRequest;
 import ru.practicum.ewm.ewmservice.dto.EventRequestStatusUpdateResult;
-import ru.practicum.ewm.ewmservice.dto.UpdateEventUserRequestDto;
+import ru.practicum.ewm.ewmservice.dto.EventUpdateByUserRequestDto;
 import ru.practicum.ewm.ewmservice.dto.ParticipationRequestDto;
 import ru.practicum.ewm.ewmservice.service.EwmService;
 
@@ -119,10 +119,10 @@ public class PrivateLayerApiController {
     public EventFullDto updateEvent(
             @Positive(message = POSITIVE) @PathVariable(UID) Long uId,
             @Positive(message = POSITIVE) @PathVariable(EID) Long eId,
-            @Valid @RequestBody UpdateEventUserRequestDto eventPatchDto
+            @Valid @RequestBody EventUpdateByUserRequestDto eventPatchDto
     ) {
         log.info(UPDATE_EVENT, eId, uId, eventPatchDto);
-        var response = ewmService.updateEvent(uId, eId, eventPatchDto);
+        var response = ewmService.authorUpdateEvent(uId, eId, eventPatchDto);
         log.info(UPDATED_EVENT, response);
         return response;
     }
@@ -131,10 +131,10 @@ public class PrivateLayerApiController {
     @PostMapping("/{user-id}/requests")
     public ParticipationRequestDto createRequest(
             @Positive(message = POSITIVE) @PathVariable(UID) Long uId,
-            @Positive(message = POSITIVE) @RequestParam(EVID) Long eId
+            @Positive(message = NOT_NEGATIVE) @RequestParam(EVID) Long eId
     ) {
         log.info(CREATE_REQUEST, eId, uId);
-        var response = ewmService.createRequest(uId, eId);
+        var response = ewmService.createParticipationRequest(uId, eId);
         log.info(REQUEST_CREATED, response);
         return response;
     }

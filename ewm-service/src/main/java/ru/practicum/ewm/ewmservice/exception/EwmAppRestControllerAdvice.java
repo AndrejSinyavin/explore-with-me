@@ -215,9 +215,9 @@ public class EwmAppRestControllerAdvice {
      * @param exception исключение
      * @return {@link EwmAppErrorResponse} с описанием ошибки и вероятных причинах
      */
-    @ExceptionHandler({EwmAppUnsuitableDatasetException.class})
+    @ExceptionHandler({EwmAppConflitActionException.class})
     @ResponseStatus(HttpStatus.CONFLICT)
-    public EwmAppErrorResponse handleIncorrectDataResponse(final EwmAppUnsuitableDatasetException exception) {
+    public EwmAppErrorResponse handleIncorrectDataResponse(final EwmAppConflitActionException exception) {
         log.warn(RESPONSE.concat(CONFLICT).concat(SPLITTER).concat(exception.getError()).concat(SPLITTER)
                 .concat(exception.getMessage()));
         return new EwmAppErrorResponse(

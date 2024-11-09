@@ -2,6 +2,7 @@ package ru.practicum.ewm.ewmservice.dto;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import org.springframework.format.annotation.DateTimeFormat;
 import ru.practicum.ewm.ewmservice.entity.EventEntity;
@@ -11,7 +12,7 @@ import java.io.Serializable;
 /**
  * DTO for {@link EventEntity}
  */
-public record UpdateEventUserRequestDto(
+public record EventUpdateByUserRequestDto(
 
         @Size(min = 20, max = 2000, message = "Размер сообщения не соответствует заданному диапазону")
         String annotation,
@@ -30,7 +31,7 @@ public record UpdateEventUserRequestDto(
 
         Boolean paid,
 
-        @Positive(message = "Величина может быть только положительным значением")
+        @PositiveOrZero(message = "Величина не может быть отрицательным значением")
         Integer participantLimit,
 
         Boolean requestModeration,

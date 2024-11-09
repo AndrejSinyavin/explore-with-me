@@ -31,12 +31,15 @@ public class StatsServiceImpl implements StatsService {
         try {
             var hitIsPresent = statsRepository.existsByUriAndIp(endpointHitEntity.getUri(), endpointHitEntity.getIp());
             if (hitIsPresent) {
+                statsRepository.save(endpointHitEntity);
                 throw new StatsAppAcceptedException(
                         this.toString(), "", ""
                 );
             }
             statsRepository.save(endpointHitEntity);
-        } catch (Exception e) {
+        } catch (StatsAppAcceptedException exception) {
+            throw exception;
+        } catch (RuntimeException e) {
             throw new InternalServiceException(
                     this.statsRepository.getClass().getName(),
                     "Запись статистики не выполнена",

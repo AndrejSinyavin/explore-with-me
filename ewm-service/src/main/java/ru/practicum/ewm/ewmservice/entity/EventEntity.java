@@ -8,6 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
@@ -22,6 +23,8 @@ import ru.practicum.ewm.ewmservice.dto.EventShortDto;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import static java.time.Clock.systemUTC;
 
@@ -61,8 +64,8 @@ public class EventEntity {
     @JoinColumn(name = "initiator", nullable = false)
     UserEntity initiator;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @OnDelete(action = OnDeleteAction.RESTRICT)
+    @OneToOne(optional = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "location", nullable = false)
     EventLocationEntity location;
 
@@ -86,6 +89,9 @@ public class EventEntity {
 
     @Column(name = "views")
     Long views;
+
+    @OneToMany(mappedBy = "event")
+    Set<CompilationEventRelation> compilations = new LinkedHashSet<>();
 
     public EventFullDto toEventFullDto() {
         return new EventFullDto(

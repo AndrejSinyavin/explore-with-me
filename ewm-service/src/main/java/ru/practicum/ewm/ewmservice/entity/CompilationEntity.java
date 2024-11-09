@@ -11,8 +11,11 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.FieldDefaults;
-import org.apache.commons.collections4.OrderedMap;
-import org.apache.commons.collections4.map.ListOrderedMap;
+import ru.practicum.ewm.ewmservice.dto.CompilationDto;
+
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Getter
 @Setter
@@ -25,15 +28,23 @@ public class CompilationEntity {
     @Column(name = "id", nullable = false)
     Long id;
 
-    @Column(name = "description")
-    String description;
-
-    @OneToMany(mappedBy = "description")
-    OrderedMap<Long, EventEntity> events = new ListOrderedMap<>();
-
-    @Column(name = "pinned", nullable = false)
+    @Column(name = "pinned")
     Boolean pinned;
 
-    @Column(name = "title", nullable = false, length = 250)
+    @Column(name = "title", nullable = false, length = 50)
     String title;
+
+    @OneToMany(mappedBy = "compilation")
+    Set<CompilationEventRelation> events = new LinkedHashSet<>();
+
+    public CompilationDto toDto() {
+        return new CompilationDto(
+                id,
+                events.stream()
+                        .map(element -> element.getEvent().toEventShortDto())
+                        .collect(Collectors.toSet()),
+                pinned,
+                title
+        );
+    }
 }
