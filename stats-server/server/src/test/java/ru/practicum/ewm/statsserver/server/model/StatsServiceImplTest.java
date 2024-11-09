@@ -8,7 +8,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import ru.practicum.ewm.statsserver.commondto.ViewStatsDto;
-import ru.practicum.ewm.statsserver.server.exception.InternalServiceException;
+import ru.practicum.ewm.statsserver.server.exception.AppInternalServiceException;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -45,7 +45,7 @@ class StatsServiceImplTest {
     void addTest() {
         when(statsRepository.save(any()))
                 .thenThrow(RuntimeException.class);
-        assertThrows(InternalServiceException.class,
+        assertThrows(AppInternalServiceException.class,
                 () -> statsServiceImpl.add(endpointHitEntity));
         verify(statsRepository).save(any());
     }
@@ -123,7 +123,7 @@ class StatsServiceImplTest {
     void getStatsExceptionsTest() {
         when(statsRepository.getStatsWithoutUris(any(), any()))
                 .thenThrow(RuntimeException.class);
-        assertThrows(InternalServiceException.class,
+        assertThrows(AppInternalServiceException.class,
                 () -> statsServiceImpl.getStats(
                         "2000-01-01 00:00:00",
                         "2000-01-01 00:00:00",

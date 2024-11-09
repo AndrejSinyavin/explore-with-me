@@ -49,7 +49,7 @@ public class StatsController {
             @RequestParam(value = "start") String start,
             @RequestParam(value = "end") String end,
             @RequestParam(value = "uris", required = false) List<String> uris,
-            @RequestParam(value = "unique", required = false) Boolean unique
+            @RequestParam(value = "unique", defaultValue = "false") Boolean unique
     ) {
         log.info(GET_REQUEST, start, end, uris, unique);
         var result = statsService.getStats(start, end, uris, unique);

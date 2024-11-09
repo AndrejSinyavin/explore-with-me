@@ -3,8 +3,11 @@ package ru.practicum.ewm.statsserver.server.model;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.practicum.ewm.statsserver.commondto.ViewStatsDto;
-import ru.practicum.ewm.statsserver.server.exception.InternalServiceException;
+import ru.practicum.ewm.statsserver.server.exception.AppBadRequestException;
+import ru.practicum.ewm.statsserver.server.exception.AppInternalServiceException;
+import ru.practicum.ewm.statsserver.server.exception.StatsAppAcceptedException;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -40,7 +43,7 @@ public class StatsServiceImpl implements StatsService {
         } catch (StatsAppAcceptedException exception) {
             throw exception;
         } catch (RuntimeException e) {
-            throw new InternalServiceException(
+            throw new AppInternalServiceException(
                     this.statsRepository.getClass().getName(),
                     "Запись статистики не выполнена",
                     e.getMessage()
@@ -69,6 +72,13 @@ public class StatsServiceImpl implements StatsService {
             var end = Instant.from(LocalDateTime
                     .parse(endArg, DateTimeFormatter.ofPattern(DATE_TIME_PATTERN))
                     .atZone(ZoneId.of("GMT0")));
+            if (begin == null || end == null || begin.isAfter(end) || end.isAfter(Instant.now(Clock.systemUTC()))) {
+                throw new AppBadRequestException(
+                        this.getClass().getName(),
+                        "Неверные данные в запросе",
+                        "Недопустимые границы диапазона времени"
+                        );
+            }
             if (uris == null || uris.isEmpty()) {
                 if (unique == null || !unique) {
                     stats = statsRepository.getStatsWithoutUris(begin, end);
@@ -83,7 +93,7 @@ public class StatsServiceImpl implements StatsService {
             stats.sort(Comparator.comparingLong(ViewStatsDto::hits).reversed());
             return stats;
         } catch (Exception e) {
-            throw new InternalServiceException(
+            throw new AppInternalServiceException(
                     this.statsRepository.getClass().getName(),
                     "Чтение статистики не выполнено",
                     e.getMessage()
