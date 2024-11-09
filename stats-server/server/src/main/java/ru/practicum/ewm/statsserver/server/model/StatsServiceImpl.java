@@ -7,7 +7,6 @@ import ru.practicum.ewm.statsserver.server.exception.AppBadRequestException;
 import ru.practicum.ewm.statsserver.server.exception.AppInternalServiceException;
 import ru.practicum.ewm.statsserver.server.exception.StatsAppAcceptedException;
 
-import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
