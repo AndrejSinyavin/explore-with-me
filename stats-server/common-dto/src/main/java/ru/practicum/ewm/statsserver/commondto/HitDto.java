@@ -1,5 +1,8 @@
 package ru.practicum.ewm.statsserver.commondto;
 
+import jakarta.validation.constraints.NotBlank;
+import org.springframework.format.annotation.DateTimeFormat;
+
 import java.io.Serializable;
 
 /**
@@ -10,9 +13,15 @@ import java.io.Serializable;
  * @param ip с какого IP был выполнен запрос
  * @param timestamp дата и время выполнения запроса
  */
-public record EndpointHitCreateDto(
+public record HitDto(
+        @NotBlank
         String app,
+        @NotBlank
         String uri,
+        @NotBlank
         String ip,
-        String timestamp) implements Serializable {
+        @NotBlank
+        @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+        String timestamp
+) implements Serializable {
 }

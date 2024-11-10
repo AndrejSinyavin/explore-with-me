@@ -16,14 +16,14 @@ import java.time.Instant;
 public class StatsRepositoryTest {
     @Autowired
     private StatsService statsService;
-    private EndpointHitEntity hitOne;
+    private HitEntity hitOne;
 
     public StatsRepositoryTest() {
     }
 
     @BeforeEach
     void setUp() {
-        hitOne = new EndpointHitEntity(0L, "app", "uri", "ip", Instant.now(Clock.systemUTC()));
+        hitOne = new HitEntity(0L, "app", "uri", "ip", Instant.now(Clock.systemUTC()));
     }
 
     @Test

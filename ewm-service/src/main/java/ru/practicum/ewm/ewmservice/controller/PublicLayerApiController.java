@@ -58,7 +58,7 @@ public class PublicLayerApiController {
     static String GET_PUBLISHED_EVENT = "\n==>   Запрос GET: получить подробную информацию о событии ID {}";
     static String PUBLISHED_EVENT = "\n<==   Ответ: '200 Ok' Запрос выполнен - событие: {}";
     static String SEND_ACTION_TO_STAT_SERVICE =
-            "\n<==    Информация о просмотре события отправлена сервису статистики: {}";
+            "\n<==    Информация о просмотре события отправлена сервису статистики: {} {} {}";
     static String GET_EVENTS_BY_CRITERIA = "\n==>   Запрос GET: получить список опубликованных событий по критериям {}";
     static String EVENTS_BY_CRITERIA = "\n<==   Ответ: '200 Ok' Запрос выполнен - список событий: {}";
 
@@ -99,9 +99,11 @@ public class PublicLayerApiController {
         log.info(PUBLISHED_EVENT, response);
         String endpointPath = request.getRequestURI();
         String ip = request.getRemoteAddr();
-        if (logAction(thisService, endpointPath, ip)) {
+        var isUniqueHit = logAction(thisService, endpointPath, ip);
+        if (isUniqueHit) {
             ewmService.addReview(eId);
         }
+        log.info("Просмотр афиши ID {} зафиксирован в сервисе статистики, он уникальный: {}", eId, isUniqueHit);
         return response;
     }
 
@@ -112,11 +114,15 @@ public class PublicLayerApiController {
         log.info(GET_EVENTS_BY_CRITERIA, params);
         var response = ewmService.getEventsByCriteria(request, params);
         log.info(EVENTS_BY_CRITERIA, response);
+        log.info(PUBLISHED_EVENT, response);
+        String endpointPath = request.getRequestURI();
+        String ip = request.getRemoteAddr();
+        logAction(thisService, endpointPath, ip);
         return response;
     }
 
-    private Boolean logAction(String service, String endpointPath, String ip) {
-        log.info(SEND_ACTION_TO_STAT_SERVICE);
+    private boolean logAction(String service, String endpointPath, String ip) {
+        log.info(SEND_ACTION_TO_STAT_SERVICE, service, endpointPath, ip);
         return statsClient.hit(
                 service,
                 endpointPath,

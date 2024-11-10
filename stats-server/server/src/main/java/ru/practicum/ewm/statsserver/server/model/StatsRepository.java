@@ -14,10 +14,10 @@ import java.util.Optional;
  * JPA-репозиторий сервиса работы со статистикой
  */
 @Repository
-public interface StatsRepository extends JpaRepository<EndpointHitEntity, Long> {
+public interface StatsRepository extends JpaRepository<HitEntity, Long> {
     @Query("""
             select new ru.practicum.ewm.statsserver.commondto.ViewStatsDto(e.app, e.uri, count(e.ip))
-            from EndpointHitEntity e
+            from HitEntity e
             where (e.timestamp >= :begin) and (e.timestamp <= :end) and (e.uri in :uris)
             group by e.app, e.uri
             order by e.app, e.uri""")
@@ -28,7 +28,7 @@ public interface StatsRepository extends JpaRepository<EndpointHitEntity, Long> 
 
     @Query("""
             select new ru.practicum.ewm.statsserver.commondto.ViewStatsDto(e.app, e.uri, count(e.ip))
-            from EndpointHitEntity e
+            from HitEntity e
             where e.timestamp >= :begin and e.timestamp <= :end
             group by e.app, e.uri
             order by e.app, e.uri""")
@@ -38,7 +38,7 @@ public interface StatsRepository extends JpaRepository<EndpointHitEntity, Long> 
 
     @Query("""
             select new ru.practicum.ewm.statsserver.commondto.ViewStatsDto(e.app, e.uri, count(distinct e.ip))
-            from EndpointHitEntity e
+            from HitEntity e
             where e.timestamp >= :begin and e.timestamp <= :end and (e.uri in :uris)
             group by e.app, e.uri
             order by e.app, e.uri""")
@@ -49,7 +49,7 @@ public interface StatsRepository extends JpaRepository<EndpointHitEntity, Long> 
 
     @Query("""
             select new ru.practicum.ewm.statsserver.commondto.ViewStatsDto(e.app, e.uri, count(distinct e.ip))
-            from EndpointHitEntity e
+            from HitEntity e
             where e.timestamp >= :begin and e.timestamp <= :end
             group by e.app, e.uri
             order by e.app, e.uri""")
@@ -57,7 +57,10 @@ public interface StatsRepository extends JpaRepository<EndpointHitEntity, Long> 
             @Param("begin") Instant begin,
             @Param("end") Instant end);
 
-    Optional<EndpointHitEntity> findFirstByUriAndIp(String uri, String ip);
+    Optional<HitEntity> findFirstByUriAndIp(String uri, String ip);
 
     boolean existsByUriAndIp(String uri, String ip);
+
+    @Query("select (count(e) > 0) from HitEntity e where upper(e.uri) = upper(?1) and upper(e.ip) = upper(?2)")
+    boolean isHitExists(String uri, String ip);
 }
