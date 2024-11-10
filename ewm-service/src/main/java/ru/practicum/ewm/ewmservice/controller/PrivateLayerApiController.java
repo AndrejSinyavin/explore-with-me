@@ -72,6 +72,7 @@ public class PrivateLayerApiController {
             "\n==>   Запрос GET: получить список всех запросов пользователя ID {} на участие в мероприятиях";
     static String MY_REQUESTS_FUNDED =
             "\n<==   Ответ: '200 Ok' Запрос выполнен - список запросов на участие пользователя {} в мероприятиях: {}";
+    static final String PathForUsersEvent = "/{user-id}/events/{event-id}";
 
     EwmService ewmService;
 
@@ -103,7 +104,7 @@ public class PrivateLayerApiController {
     }
 
     @ResponseStatus(HttpStatus.OK)
-    @GetMapping("/{user-id}/events/{event-id}")
+    @GetMapping(PathForUsersEvent)
     public EventFullDto getEvent(
             @Positive(message = POSITIVE) @PathVariable(UID) Long uId,
             @Positive(message = POSITIVE) @PathVariable(EID) Long eId
@@ -115,7 +116,7 @@ public class PrivateLayerApiController {
     }
 
     @ResponseStatus(HttpStatus.OK)
-    @PatchMapping("/{user-id}/events/{event-id}")
+    @PatchMapping(PathForUsersEvent)
     public EventFullDto updateEvent(
             @Positive(message = POSITIVE) @PathVariable(UID) Long uId,
             @Positive(message = POSITIVE) @PathVariable(EID) Long eId,
@@ -140,7 +141,7 @@ public class PrivateLayerApiController {
     }
 
     @ResponseStatus(HttpStatus.OK)
-    @PatchMapping("/{user-id}/events/{event-id}/requests")
+    @PatchMapping(PathForUsersEvent + "/requests")
     public EventRequestStatusUpdateResult updateRequestStatuses(
             @Positive(message = POSITIVE) @PathVariable(UID) Long uId,
             @Positive(message = POSITIVE) @PathVariable(EID) Long eId,
@@ -165,7 +166,7 @@ public class PrivateLayerApiController {
     }
 
     @ResponseStatus(HttpStatus.OK)
-    @GetMapping("/{user-id}/events/{event-id}/requests")
+    @GetMapping(PathForUsersEvent + "/requests")
     public List<ParticipationRequestDto> getRequestsForUserEvent(
             @Positive(message = POSITIVE) @PathVariable(UID) Long uId,
             @Positive(message = POSITIVE) @PathVariable(EID) Long eId
