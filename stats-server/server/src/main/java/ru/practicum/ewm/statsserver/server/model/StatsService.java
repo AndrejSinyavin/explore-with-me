@@ -1,5 +1,6 @@
 package ru.practicum.ewm.statsserver.server.model;
 
+import ru.practicum.ewm.statsserver.commondto.HitDto;
 import ru.practicum.ewm.statsserver.commondto.ViewStatsDto;
 
 import java.util.List;
@@ -9,7 +10,7 @@ import java.util.List;
  */
 public interface StatsService {
 
-    void add(EndpointHitEntity endpointHitEntity);
+    boolean add(HitDto endpointHitEntity);
 
     List<ViewStatsDto> getStats(String start, String end, List<String> uris, Boolean unique);
 }

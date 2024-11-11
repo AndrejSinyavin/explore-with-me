@@ -1,10 +1,13 @@
 package ru.practicum.ewm.statsserver.server.model;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import ru.practicum.ewm.statsserver.commondto.HitDto;
 import ru.practicum.ewm.statsserver.commondto.ViewStatsDto;
-import ru.practicum.ewm.statsserver.server.exception.InternalServiceException;
+import ru.practicum.ewm.statsserver.server.exception.AppBadRequestException;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -16,27 +19,25 @@ import java.util.List;
  * Реализация интерфейса {@link StatsService}
  */
 @Service
-@RequiredArgsConstructor
+@RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class StatsServiceImpl implements StatsService {
     private static final String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
     private final StatsRepository statsRepository;
 
     /**
-     * Метод сохраняет в БД информации о том, что на uri конкретного сервиса был отправлен запрос пользователем.
+     * Запись в репозиторий информации об успешной обработке обращения по конкретному эндпоинту основного сервиса
      *
-     * @param endpointHitEntity сохраняемая информация
+     * @param hitDto сохраняемая информация
+     * @return
      */
     @Override
-    public void add(EndpointHitEntity endpointHitEntity) {
-        try {
-            statsRepository.save(endpointHitEntity);
-        } catch (Exception e) {
-            throw new InternalServiceException(
-                    this.statsRepository.getClass().getName(),
-                    "Запись статистики не выполнена",
-                    e.getMessage()
-            );
-        }
+    public boolean add(HitDto hitDto) {
+        var isUniqueHit = !statsRepository.isHitExists(hitDto.uri(), hitDto.ip());
+        statsRepository.save(new HitEntity(0L, hitDto.app(), hitDto.uri(), hitDto.ip(),
+                Instant.from(LocalDateTime.parse(
+                        hitDto.timestamp(),
+                        DateTimeFormatter.ofPattern(DATE_TIME_PATTERN)).atZone(ZoneId.of("UTC")))));
+        return isUniqueHit;
     }
 
     /**
@@ -52,33 +53,46 @@ public class StatsServiceImpl implements StatsService {
      */
     @Override
     public List<ViewStatsDto> getStats(String beginArg, String endArg, List<String> uris, Boolean unique) {
-        try {
-            List<ViewStatsDto> stats;
-            var begin = Instant.from(LocalDateTime
+        List<ViewStatsDto> stats;
+        Instant end;
+        Instant begin;
+        if ((beginArg == null && endArg != null) || (beginArg != null && endArg == null)) {
+            throw new AppBadRequestException(
+                    this.getClass().getName(),
+                    "Неверные данные в запросе",
+                    "Диапазон для поиска либо должен быть задан полностью, либо отсутствовать"
+            );
+        } else if (beginArg == null) {
+            begin = Instant.EPOCH;
+            end = Instant.now(Clock.systemUTC());
+        } else {
+            begin = Instant.from(LocalDateTime
                     .parse(beginArg, DateTimeFormatter.ofPattern(DATE_TIME_PATTERN))
-                    .atZone(ZoneId.of("GMT0")));
-            var end = Instant.from(LocalDateTime
+                    .atZone(ZoneId.of("UTC")));
+            end = Instant.from(LocalDateTime
                     .parse(endArg, DateTimeFormatter.ofPattern(DATE_TIME_PATTERN))
-                    .atZone(ZoneId.of("GMT0")));
-            if (uris == null || uris.isEmpty()) {
-                if (unique == null || !unique) {
-                    stats = statsRepository.getStatsWithoutUris(begin, end);
-                } else {
-                    stats =  statsRepository.getStatsWithoutUrisAndWithUnique(begin, end);
-                }
-            } else if (unique == null || !unique) {
-                stats =  statsRepository.getStatsWithUris(begin, end, uris);
-            } else {
-                stats =  statsRepository.getStatsWithUrisAndWithUnique(begin, end, uris);
-            }
-            stats.sort(Comparator.comparingLong(ViewStatsDto::hits).reversed());
-            return stats;
-        } catch (Exception e) {
-            throw new InternalServiceException(
-                    this.statsRepository.getClass().getName(),
-                    "Чтение статистики не выполнено",
-                    e.getMessage()
+                    .atZone(ZoneId.of("UTC")));
+        }
+        if (begin.isAfter(end)) {
+            throw new AppBadRequestException(
+                    this.getClass().getName(),
+                    "Неверные данные в запросе",
+                    "Недопустимые границы временного диапазона для поиска:" +
+                            " начальная граница не может быть позже конечной"
             );
         }
+        if (uris == null || uris.isEmpty()) {
+            if (unique) {
+                stats = statsRepository.getStatsWithoutUrisAndWithUnique(begin, end);
+            } else {
+                stats = statsRepository.getStatsWithoutUris(begin, end);
+            }
+        } else if (unique) {
+            stats = statsRepository.getStatsWithUrisAndWithUnique(begin, end, uris);
+        } else {
+            stats = statsRepository.getStatsWithUris(begin, end, uris);
+        }
+        stats.sort(Comparator.comparingLong(ViewStatsDto::hits).reversed());
+        return stats;
     }
 }

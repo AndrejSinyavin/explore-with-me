@@ -22,7 +22,7 @@ import java.time.Instant;
 @AllArgsConstructor
 @Getter
 @Setter
-public class EndpointHitEntity {
+public class HitEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;

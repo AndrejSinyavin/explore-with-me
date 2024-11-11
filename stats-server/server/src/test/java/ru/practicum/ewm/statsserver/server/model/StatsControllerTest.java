@@ -10,7 +10,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import ru.practicum.ewm.statsserver.commondto.EndpointHitCreateDto;
+import ru.practicum.ewm.statsserver.commondto.HitDto;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -35,7 +35,7 @@ class StatsControllerTest {
     private static final String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
     private final ObjectMapper mapper = new ObjectMapper();
     private MockMvc mvc;
-    private EndpointHitCreateDto hitCreate;
+    private HitDto hitCreate;
     private String dateTime;
 
     @Mock
@@ -46,9 +46,10 @@ class StatsControllerTest {
 
     @BeforeEach
     void setUp() {
-        dateTime = LocalDateTime.ofInstant(Instant.now(Clock.systemUTC()), UTC).format(DateTimeFormatter.ofPattern(DATE_TIME_PATTERN));
+        dateTime = LocalDateTime.ofInstant(Instant.now(Clock.systemUTC()), UTC)
+                .format(DateTimeFormatter.ofPattern(DATE_TIME_PATTERN));
         mvc = MockMvcBuilders.standaloneSetup(statsController).build();
-        hitCreate = new EndpointHitCreateDto(
+        hitCreate = new HitDto(
                 "app",
                 "uri/normal",
                 "200.125.12.94",

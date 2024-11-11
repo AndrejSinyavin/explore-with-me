@@ -48,15 +48,44 @@ public class AppExceptionHandlers {
      * @param exception перехваченное исключение
      * @return стандартный API-ответ об ошибке ErrorResponse с описанием ошибки и вероятных причинах
      */
-    @ExceptionHandler({InternalServiceException.class})
+    @ExceptionHandler({AppInternalServiceException.class})
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ErrorResponse handleServerInternalErrorResponse(final AppException exception) {
         log.error(LOG_RESPONSE_FIVE, INTERNAL_SERVER_ERROR.concat(SERVER_ERROR),
                 exception.getSource(), exception.getError(), exception.getMessage(), exception.getStackTrace());
         return new ErrorResponse(
                 INTERNAL_SERVER_ERROR,
-                SERVER_ERROR.concat(SEPARATOR).concat(exception.getLocalizedMessage())
+                exception.getError().concat(SEPARATOR).concat(exception.getMessage())
         );
+    }
+
+    /**
+     * Обработчик исключений для ответов BAD_REQUEST
+     *
+     * @param exception перехваченное исключение
+     * @return стандартный API-ответ об ошибке ErrorResponse с описанием ошибки и вероятных причинах
+     */
+    @ExceptionHandler({AppBadRequestException.class})
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleServerInternalErrorResponse(final AppBadRequestException exception) {
+        log.error(LOG_RESPONSE_THREE, BAD_REQUEST, exception.getError(), exception.getMessage());
+        return new ErrorResponse(
+                BAD_REQUEST,
+                SERVER_ERROR.concat(SEPARATOR).concat(
+                        exception.getError().concat(SEPARATOR).concat(exception.getMessage()))
+        );
+    }
+
+    /**
+     * Обработчик исключений для ответов StatsAppAcceptedException
+     *
+     * @param ignoredException исключение
+     * @return ответ
+     */
+    @ExceptionHandler({StatsAppAcceptedException.class})
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public ErrorResponse handleAcceptedResponse(final StatsAppAcceptedException ignoredException) {
+        return new ErrorResponse("202 Accepted", "");
     }
 
     /**
