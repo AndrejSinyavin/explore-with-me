@@ -5,12 +5,11 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import org.springframework.format.annotation.DateTimeFormat;
-import ru.practicum.ewm.ewmservice.entity.EventEntity;
 
 import java.io.Serializable;
 
 /**
- * DTO for {@link EventEntity}
+ * DTO для правки пользователем афиши события, если оно на модерации, и запроса на публикацию или снятие с модерации
  */
 public record EventUpdateByUserRequestDto(
 

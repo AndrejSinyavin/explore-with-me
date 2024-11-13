@@ -14,7 +14,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
- * DTO for {@link ru.practicum.ewm.ewmservice.entity.CompilationEntity}
+ * DTO для создания подборки событий {@link ru.practicum.ewm.ewmservice.entity.CompilationEntity}
  */
 public record CompilationNewDto(
         LinkedHashSet<Long> events,

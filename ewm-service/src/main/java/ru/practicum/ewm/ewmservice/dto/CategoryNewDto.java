@@ -7,7 +7,7 @@ import ru.practicum.ewm.ewmservice.entity.CategoryEntity;
 import java.io.Serializable;
 
 /**
- * DTO
+ * DTO для создания категории
  */
 public record CategoryNewDto(
         @NotBlank(message = "Не указано название категории события")

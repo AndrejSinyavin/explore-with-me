@@ -1,8 +1,6 @@
 package ru.practicum.ewm.statsserver.client;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
@@ -18,11 +16,10 @@ import java.util.List;
 import java.util.Optional;
 
 @Component
-@RequiredArgsConstructor(onConstructor = @__(@Autowired))
 @Slf4j
 public class StatsClientImpl {
     private final RestClient restClient = RestClient.create();
-    @Value("${stats-server.url}")
+    @Value("${stats-server.url:http://localhost:9090}")
     private String statServerUrl;
 
     public boolean hit(String app, String uri, String ip, String timestamp) {

@@ -1,11 +1,9 @@
 package ru.practicum.ewm.ewmservice.dto;
 
-import ru.practicum.ewm.ewmservice.entity.UserEntity;
-
 import java.io.Serializable;
 
 /**
- * DTO for {@link UserEntity}
+ * DTO для упрощенного представления данных о пользователе в других представлениях
  */
 public record UserShortDto(
         Long id,

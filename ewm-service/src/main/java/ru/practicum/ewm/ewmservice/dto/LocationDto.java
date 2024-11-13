@@ -6,7 +6,7 @@ import ru.practicum.ewm.ewmservice.entity.EventLocationEntity;
 import java.io.Serializable;
 
 /**
- * DTO for {@link EventLocationEntity}
+ * DTO для представления данных геолокации {@link EventLocationEntity}
  */
 public record LocationDto(
         @NotNull(message = "Не указаны координаты широты") Float lat,

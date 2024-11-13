@@ -19,8 +19,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 import ru.practicum.ewm.ewmservice.dto.CategoryDto;
 import ru.practicum.ewm.ewmservice.dto.CompilationDto;
+import ru.practicum.ewm.ewmservice.dto.EventRateDto;
 import ru.practicum.ewm.ewmservice.dto.EventFullDto;
 import ru.practicum.ewm.ewmservice.dto.EventShortDto;
+import ru.practicum.ewm.ewmservice.dto.EventsStatsDto;
 import ru.practicum.ewm.ewmservice.exception.EwmAppEntityNotFoundException;
 import ru.practicum.ewm.ewmservice.service.EwmService;
 import ru.practicum.ewm.statsserver.client.StatsClientImpl;
@@ -58,10 +60,16 @@ public class PublicLayerApiController {
     static String GET_PUBLISHED_EVENT = "\n==>   Запрос GET: получить подробную информацию о событии ID {}";
     static String PUBLISHED_EVENT = "\n<==   Ответ: '200 Ok' Запрос выполнен - событие: {}";
     static String SEND_ACTION_TO_STAT_SERVICE =
-            "\n<==    Информация о просмотре события отправлена сервису статистики: {} {} {}";
+            "\n<==    Информация о просмотре события(ий) отправлена сервису статистики: {} {} {}";
     static String GET_EVENTS_BY_CRITERIA = "\n==>   Запрос GET: получить список опубликованных событий по критериям {}";
     static String EVENTS_BY_CRITERIA = "\n<==   Ответ: '200 Ok' Запрос выполнен - список событий: {}";
-
+    static String EVENT_HIT = "Просмотр афиши ID {} зафиксирован в сервисе статистики, он уникальный: {}";
+    static String GET_COMPILATION = "\n==>   Запрос GET: получить подборку событий ID {}";
+    static String FOUNDED_COMPILATION = "\n<==   Ответ: '200 Ok' Запрос выполнен - подборка {}";
+    static String GET_COMPILATIONS = "\n==>   Запрос GET: получить список подборок событий";
+    static String FOUNDED_COMPILATIONS = "\n<==   Ответ: '200 Ok' Список подборок отправлен";
+    static String GET_EXPECTATION_RATE = "\n==>   Запрос GET: показать рейтинг события ID {}";
+    static String FOUNDED_EXPECTATION_RATE = "\n<==   Ответ: '200 Ok' Рейтинг 'ожидаемости' события {}";
     String thisService = this.getClass().getName();
     StatsClientImpl statsClient;
     EwmService ewmService;
@@ -101,9 +109,9 @@ public class PublicLayerApiController {
         String ip = request.getRemoteAddr();
         var isUniqueHit = logAction(thisService, endpointPath, ip);
         if (isUniqueHit) {
-            ewmService.addReview(eId);
+            ewmService.addView(eId);
         }
-        log.info("Просмотр афиши ID {} зафиксирован в сервисе статистики, он уникальный: {}", eId, isUniqueHit);
+        log.info(EVENT_HIT, eId, isUniqueHit);
         return response;
     }
 
@@ -112,9 +120,8 @@ public class PublicLayerApiController {
     public List<EventShortDto> getEvents(HttpServletRequest request, @RequestParam Map<String, String> params
     ) {
         log.info(GET_EVENTS_BY_CRITERIA, params);
-        var response = ewmService.getEventsByCriteria(request, params);
+        var response = ewmService.getEventsByCriteria(params);
         log.info(EVENTS_BY_CRITERIA, response);
-        log.info(PUBLISHED_EVENT, response);
         String endpointPath = request.getRequestURI();
         String ip = request.getRemoteAddr();
         logAction(thisService, endpointPath, ip);
@@ -135,13 +142,16 @@ public class PublicLayerApiController {
     public CompilationDto getCompilation(
             @Positive(message = POSITIVE) @PathVariable(value = CPID) Long cpId
     ) {
-        return ewmService.getCompilationById(cpId)
+        log.info(GET_COMPILATION, cpId);
+        var response = ewmService.getCompilationById(cpId)
                 .orElseThrow(() ->
                         new EwmAppEntityNotFoundException(
                                 REQUEST_NOT_COMPLETE, ENTITY_NOT_FOUND,
                                 "Не найдена компиляция ID ".concat(String.valueOf(cpId))
                         )
                 );
+        log.info(FOUNDED_COMPILATION, response);
+        return response;
     }
 
     @ResponseStatus(HttpStatus.OK)
@@ -151,7 +161,28 @@ public class PublicLayerApiController {
             @RequestParam(value = "from", defaultValue = "0") Integer from,
             @RequestParam(value = "size", defaultValue = "10") Integer size
     ) {
-        return ewmService.getCompilations(pinned, from, size);
+        log.info(GET_COMPILATIONS);
+        var response = ewmService.getCompilations(pinned, from, size);
+        log.info(FOUNDED_COMPILATIONS);
+        return response;
     }
 
+    @ResponseStatus(HttpStatus.OK)
+    @GetMapping("/ratings/{event-id}")
+    public EventRateDto getEventRating(
+            @Positive(message = POSITIVE) @PathVariable(value = EID) Long eId) {
+        log.info(GET_EXPECTATION_RATE, eId);
+        var response = ewmService.getEventRating(eId);
+        log.info(FOUNDED_EXPECTATION_RATE, response);
+        return response;
+    }
+
+    @ResponseStatus(HttpStatus.OK)
+    @GetMapping("/ratings/")
+    public List<EventsStatsDto> getRatings(
+            @Positive(message = POSITIVE) @RequestParam(value = "top", defaultValue = "10") Integer top
+    ) {
+        var response = ewmService.getRatings(top);
+        return response;
+    }
 }

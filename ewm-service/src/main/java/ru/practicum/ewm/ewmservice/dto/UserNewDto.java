@@ -8,7 +8,7 @@ import ru.practicum.ewm.ewmservice.entity.UserEntity;
 import java.io.Serializable;
 
 /**
- * DTO для {@link UserEntity}. Принимает из API данные о создаваемом пользователе.
+ * DTO {@link UserEntity} для создания анкеты пользователя сервиса.
  */
 public record UserNewDto(
         @Email(message = "Email имеет неверный формат")

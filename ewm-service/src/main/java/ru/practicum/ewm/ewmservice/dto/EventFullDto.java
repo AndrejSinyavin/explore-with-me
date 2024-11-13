@@ -5,7 +5,7 @@ import ru.practicum.ewm.ewmservice.entity.EventEntity;
 import java.io.Serializable;
 
 /**
- * DTO for {@link EventEntity}
+ * DTO для подробного представления доступных полей события {@link EventEntity}
  */
 public record EventFullDto(
         Long id,

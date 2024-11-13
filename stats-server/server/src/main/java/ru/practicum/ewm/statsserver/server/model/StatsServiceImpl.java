@@ -28,7 +28,7 @@ public class StatsServiceImpl implements StatsService {
      * Запись в репозиторий информации об успешной обработке обращения по конкретному эндпоинту основного сервиса
      *
      * @param hitDto сохраняемая информация
-     * @return
+     * @return true, если записан запрос с нового IP
      */
     @Override
     public boolean add(HitDto hitDto) {

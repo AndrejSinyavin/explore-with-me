@@ -42,6 +42,9 @@ public class UserEntity {
             cascade = {CascadeType.ALL}, orphanRemoval = true)
     Set<EventEntity> userEventEntities = new LinkedHashSet<>();
 
+    @OneToMany(mappedBy = "user")
+    Set<EventExpectationRatingEntity> userEventExpectations = new LinkedHashSet<>();
+
     public UserDto toUserDto() {
         return new UserDto(id, email, name);
     }

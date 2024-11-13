@@ -12,7 +12,7 @@ import ru.practicum.ewm.ewmservice.entity.EventEntity;
 import java.io.Serializable;
 
 /**
- * DTO for {@link EventEntity}
+ * DTO для создания события {@link EventEntity}
  */
 public record EventNewDto(
         @NotBlank(message = "Не указана аннотация к событию")

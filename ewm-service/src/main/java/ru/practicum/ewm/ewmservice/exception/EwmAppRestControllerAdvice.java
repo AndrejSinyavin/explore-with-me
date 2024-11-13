@@ -215,9 +215,9 @@ public class EwmAppRestControllerAdvice {
      * @param exception исключение
      * @return {@link EwmAppErrorResponse} с описанием ошибки и вероятных причинах
      */
-    @ExceptionHandler({EwmAppConflitActionException.class})
+    @ExceptionHandler({EwmAppConflictActionException.class})
     @ResponseStatus(HttpStatus.CONFLICT)
-    public EwmAppErrorResponse handleIncorrectDataResponse(final EwmAppConflitActionException exception) {
+    public EwmAppErrorResponse handleIncorrectDataResponse(final EwmAppConflictActionException exception) {
         log.warn(RESPONSE.concat(CONFLICT).concat(SPLITTER).concat(exception.getError()).concat(SPLITTER)
                 .concat(exception.getMessage()));
         return new EwmAppErrorResponse(

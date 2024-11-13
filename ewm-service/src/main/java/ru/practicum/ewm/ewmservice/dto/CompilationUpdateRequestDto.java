@@ -6,7 +6,7 @@ import java.io.Serializable;
 import java.util.Set;
 
 /**
- * DTO for {@link ru.practicum.ewm.ewmservice.entity.CompilationEntity}
+ * DTO для обновления выборочных полей подборки событий {@link ru.practicum.ewm.ewmservice.entity.CompilationEntity}
  */
 public record CompilationUpdateRequestDto(
         Set<Long> events,

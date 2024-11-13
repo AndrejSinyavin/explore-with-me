@@ -4,5 +4,6 @@ public interface EwmService extends
         UserApiService,
         CategoryApiService,
         EventApiService,
-        CompilationApiService {
+        CompilationApiService,
+        RatingApiService {
 }
