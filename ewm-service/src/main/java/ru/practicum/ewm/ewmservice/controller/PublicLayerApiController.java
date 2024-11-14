@@ -182,7 +182,6 @@ public class PublicLayerApiController {
     public List<EventsStatsDto> getRatings(
             @Positive(message = POSITIVE) @RequestParam(value = "top", defaultValue = "10") Integer top
     ) {
-        var response = ewmService.getRatings(top);
-        return response;
+        return ewmService.getRatings(top);
     }
 }

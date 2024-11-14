@@ -10,12 +10,15 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.FieldDefaults;
 
 @Getter
 @Setter
 @Entity
+@FieldDefaults(level = AccessLevel.PRIVATE)
 @Table(name = "satisfaction_event_rating", schema = "public",
         uniqueConstraints = @UniqueConstraint(name = "uc_event_satisfaction",
                 columnNames = {"event_id", "user_id"}))
@@ -23,16 +26,16 @@ public class EventSatisfactionRatingEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private Long id;
+    Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(optional = false)
     @JoinColumn(name = "event_id", nullable = false)
-    private EventEntity event;
+    EventEntity event;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "user_id")
-    private UserEntity user;
+    UserEntity user;
 
     @Column(name = "satisfaction_rating", nullable = false)
-    private Integer satisfactionRating;
+    Integer satisfactionRating;
 }
