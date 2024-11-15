@@ -1,0 +1,17 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="StatsServiceAppLocalDebug" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <additionalParameters>
+      <param>
+        <option name="enabled" value="true" />
+        <option name="name" value="spring.datasource.url" />
+        <option name="value" value="jdbc:postgresql://localhost:5432/stats-db" />
+      </param>
+    </additionalParameters>
+    <option name="HIDE_BANNER" value="true" />
+    <module name="server" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="ru.practicum.ewm.statsserver.server.StatsServiceApp" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

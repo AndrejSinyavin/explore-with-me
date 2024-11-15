@@ -6,11 +6,11 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.ewmservice.dto.CategoryDto;
@@ -18,6 +18,8 @@ import ru.practicum.ewm.ewmservice.dto.CategoryNewDto;
 import ru.practicum.ewm.ewmservice.dto.CompilationDto;
 import ru.practicum.ewm.ewmservice.dto.CompilationNewDto;
 import ru.practicum.ewm.ewmservice.dto.CompilationUpdateRequestDto;
+import ru.practicum.ewm.ewmservice.dto.EventRateDto;
+import ru.practicum.ewm.ewmservice.dto.EventShortRateDto;
 import ru.practicum.ewm.ewmservice.dto.EventFullDto;
 import ru.practicum.ewm.ewmservice.dto.EventNewDto;
 import ru.practicum.ewm.ewmservice.dto.EventRequestStatusUpdateRequest;
@@ -34,20 +36,27 @@ import ru.practicum.ewm.ewmservice.entity.CategoryEntity;
 import ru.practicum.ewm.ewmservice.entity.CompilationEntity;
 import ru.practicum.ewm.ewmservice.entity.CompilationEventRelation;
 import ru.practicum.ewm.ewmservice.entity.EventEntity;
+import ru.practicum.ewm.ewmservice.entity.EventExpectationRatingEntity;
 import ru.practicum.ewm.ewmservice.entity.EventLocationEntity;
+import ru.practicum.ewm.ewmservice.entity.EventSatisfactionRatingEntity;
 import ru.practicum.ewm.ewmservice.entity.EventState;
+import ru.practicum.ewm.ewmservice.entity.EventRatesEntity;
 import ru.practicum.ewm.ewmservice.entity.UserRequestModerationState;
 import ru.practicum.ewm.ewmservice.entity.ParticipationRequestEntity;
 import ru.practicum.ewm.ewmservice.entity.ParticipationRequestState;
 import ru.practicum.ewm.ewmservice.entity.UserEntity;
 import ru.practicum.ewm.ewmservice.exception.EwmAppEntityNotFoundException;
+import ru.practicum.ewm.ewmservice.exception.EwmAppInternalServiceException;
 import ru.practicum.ewm.ewmservice.exception.EwmAppRequestValidateException;
-import ru.practicum.ewm.ewmservice.exception.EwmAppConflitActionException;
+import ru.practicum.ewm.ewmservice.exception.EwmAppConflictActionException;
 import ru.practicum.ewm.ewmservice.repository.CategoryRepository;
 import ru.practicum.ewm.ewmservice.repository.CompilationEventRelationRepository;
 import ru.practicum.ewm.ewmservice.repository.CompilationRepository;
 import ru.practicum.ewm.ewmservice.repository.EventLocationRepository;
 import ru.practicum.ewm.ewmservice.repository.EventRepository;
+import ru.practicum.ewm.ewmservice.repository.RatingExpectationRepository;
+import ru.practicum.ewm.ewmservice.repository.RatingSatisfactionRepository;
+import ru.practicum.ewm.ewmservice.repository.RatingStatRepository;
 import ru.practicum.ewm.ewmservice.repository.ParticipationRequestRepository;
 import ru.practicum.ewm.ewmservice.repository.UserRepository;
 
@@ -101,10 +110,15 @@ public class EwmServiceImpl implements EwmService {
     ParticipationRequestRepository participationRequestRepository;
     CompilationEventRelationRepository compilationEventRelationRepository;
     CompilationRepository compilationRepository;
+    RatingExpectationRepository ratingExpectationRepository;
+    RatingSatisfactionRepository ratingSatisfactionRepository;
+    RatingStatRepository ratingStatRepository;
 
-    /*
-     * @param userNewDto
-     * @return
+
+    /**
+     * Создание пользователя
+     * @param userNewDto - данные для создания
+     * @return созданная анкета с идентификатором
      */
     @Override
     public UserDto addUser(UserNewDto userNewDto) {
@@ -112,8 +126,9 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param criteria
-     * @return
+     * Найти пользователя(ей) по набору критериев
+     * @param criteria критерии поиска
+     * @return список найденных пользователей
      */
     @Override
     public List<UserDto> getUsers(SearchCriteria criteria) {
@@ -128,7 +143,8 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param uId
+     * Удаление пользователя с сервиса
+     * @param uId идентификатор пользователя
      */
     @Override
     public void deleteUser(Long uId) {
@@ -142,8 +158,9 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param categoryNewDto
-     * @return
+     * Создание новой категории для события
+     * @param categoryNewDto данные для создания
+     * @return созданная категория с идентификатором
      */
     @Override
     public CategoryDto addCategory(CategoryNewDto categoryNewDto) {
@@ -151,8 +168,9 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param cId
-     * @return
+     * Получение категории события по ее идентификатору
+     * @param cId идентификатор события
+     * @return найденное событие
      */
     @Override
     public CategoryDto getCategoryById(Long cId) {
@@ -160,8 +178,9 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param limit
-     * @param offset
+     * Получить для просмотра группу категорий события
+     * @param limit количество
+     * @param offset с какого порядкового номера в существующем наборе
      * @return
      */
     @Override
@@ -170,7 +189,8 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param cId
+     * Удалить категорию события
+     * @param cId идентификатор категорию
      */
     @Override
     public void deleteCategoryById(Long cId) {
@@ -179,9 +199,10 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param cId
-     * @param categoryNewDto
-     * @return
+     * Выборочно обновить поля категории события
+     * @param cId идентификатор категории
+     * @param categoryNewDto набор полей
+     * @return обновленная категория
      */
     @Override
     public CategoryDto updateCategoryById(Long cId, CategoryNewDto categoryNewDto) {
@@ -195,10 +216,12 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param uId
-     * @param newEvent
-     * @return
+     * Добавить анкету события на сервис. После добавления имеет статус ожидания модерации.
+     * @param uId идентификатор автора анкеты
+     * @param newEvent данные о событии
+     * @return анкета с установленным идентификатором
      */
+    @Transactional
     @Override
     public EventFullDto addEvent(Long uId, EventNewDto newEvent) {
         var eventDateTime = toInstantTime(newEvent.eventDate());
@@ -240,14 +263,21 @@ public class EwmServiceImpl implements EwmService {
         if (newEvent.participantLimit() != null) createdEvent.setParticipantLimit(newEvent.participantLimit());
         if (newEvent.requestModeration() != null) createdEvent.setRequestModeration(newEvent.requestModeration());
         createdEvent.setState(EventState.PENDING);
-        return eventRepository.save(createdEvent).toEventFullDto();
+        var event = eventRepository.save(createdEvent);
+        var eventStats = new EventRatesEntity();
+        eventStats.setEvent(event);
+        eventStats.setExpectationRate(0L);
+        eventStats.setSummarySatisfactionRate(0L);
+        ratingStatRepository.save(eventStats);
+        return event.toEventFullDto();
     }
 
     /**
-     * @param uId
-     * @param pageFrom
-     * @param pageSize
-     * @return
+     * Показать анкеты событий одного автора в диапазоне
+     * @param uId идентификатор автора
+     * @param pageFrom с позиции в списке
+     * @param pageSize размер выборки
+     * @return список для просмотра
      */
     @Override
     public List<EventFullDto> getEvents(Long uId, Integer pageFrom, Integer pageSize) {
@@ -255,9 +285,10 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param eId
-     * @param uId
-     * @return
+     * Просмотреть конкретную афишу событий указанного автора
+     * @param eId идентификатор события
+     * @param uId идентификатор автора
+     * @return найденная афиша
      */
     @Override
     public EventFullDto getEventByIdAndUserId(Long eId, Long uId) {
@@ -269,10 +300,12 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param uId
-     * @param eId
-     * @param userRequestToUpdateEvent
-     * @return
+     * Запрос с данными на обновление афиши от ее автора на модерацию. Сценарии проверки на валидность запроса, его
+     * регистрация или отказ.
+     * @param uId идентификатор события
+     * @param eId идентификатор автора
+     * @param userRequestToUpdateEvent набор данных для обновления и запрос на публикацию, или снятие с модерации
+     * @return обновленная анкета, сохраненная на сервисе, ожидающая публикации
      */
     @Override
     public EventFullDto authorUpdateEvent(Long uId, Long eId, EventUpdateByUserRequestDto userRequestToUpdateEvent) {
@@ -282,7 +315,7 @@ public class EwmServiceImpl implements EwmService {
             try {
                 action = UserRequestModerationState.valueOf(actionField);
             } catch (IllegalArgumentException exception) {
-                throw new EwmAppConflitActionException(
+                throw new EwmAppConflictActionException(
                         thisService, REQUEST_NOT_COMPLETE.concat((SPLITTER)).concat((INVALID_DATA_SET)),
                         "Тип операции для обработки анкеты события отсутствует или не распознан"
                 );
@@ -295,7 +328,7 @@ public class EwmServiceImpl implements EwmService {
                 event.setState(CANCELED);
                 return eventRepository.save(event).toEventFullDto();
             } else {
-                throw new EwmAppConflitActionException(
+                throw new EwmAppConflictActionException(
                         thisService, REQUEST_NOT_COMPLETE.concat((SPLITTER)).concat((CONFLICT)),
                         "Афиша события уже опубликована, или модератор уже вернул ее на доработку");
             }
@@ -303,12 +336,12 @@ public class EwmServiceImpl implements EwmService {
             if (eventState.equals(CANCELED)) {
                 event.setState(EventState.PENDING);
             } else {
-                throw new EwmAppConflitActionException(
+                throw new EwmAppConflictActionException(
                         thisService, REQUEST_NOT_COMPLETE.concat((SPLITTER)).concat((CONFLICT)),
                         "Нельзя отправить на ревью уже опубликованную афишу события, или уже проходящую ревью");
             }
         } else if (action == null && eventState.equals(PUBLISHED)) {
-            throw new EwmAppConflitActionException(
+            throw new EwmAppConflictActionException(
                     thisService, REQUEST_NOT_COMPLETE.concat((SPLITTER)).concat((CONFLICT)),
                     "Нельзя редактировать уже опубликованную афишу события");
         }
@@ -341,23 +374,25 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param uId
-     * @param eId
-     * @return
+     * Создание заявки не регистрацию в событие/мероприятие. Сценарии валидации запроса. Постановка его в очередь
+     * на рассмотрение. Авто регистрация, если доступна.
+     * @param uId идентификатор кандидата
+     * @param eId желаемое событие
+     * @return состояние заявки
      */
     @Override
     public ParticipationRequestDto createParticipationRequest(Long uId, Long eId) {
         var user = getUser(uId);
         var isUserEvent = user.getUserEventEntities().stream().map(EventEntity::getId).anyMatch(e -> e.equals(eId));
         if (isUserEvent) {
-            throw new EwmAppConflitActionException(
+            throw new EwmAppConflictActionException(
                     thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
                     "Пользователь не может подать заявку на свое же мероприятие"
             );
         }
         var event = getEvent(eId);
         if (!event.getState().equals(PUBLISHED)) {
-            throw new EwmAppConflitActionException(
+            throw new EwmAppConflictActionException(
                     thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
                     "Мероприятие недоступно для регистрации, подождите его публикации"
             );
@@ -387,7 +422,7 @@ public class EwmServiceImpl implements EwmService {
             if (limit == 0 || (allAddedMembers < limit)) {
                 return ParticipationRequestState.CONFIRMED;
             } else {
-                throw new EwmAppConflitActionException(
+                throw new EwmAppConflictActionException(
                         thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
                         "На мероприятие нет свободных мест"
                 );
@@ -396,9 +431,11 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param eId
-     * @param adminActionForEvent
-     * @return
+     * Обработка запроса модератора на действия с поставленной в запрос на публикацию анкетой события.
+     * Публикация, возврат на редактирование, корректировка данных. Сценарии проверок на правила модерации.
+     * @param eId идентификатор нужной анкеты
+     * @param adminActionForEvent запрос модератора
+     * @return актуальное состояние запроса после его обработки
      */
     @Transactional
     @Override
@@ -409,7 +446,7 @@ public class EwmServiceImpl implements EwmService {
             try {
                 adminRequest = AdminRequestModerationEventState.valueOf(adminActionForEvent.stateAction());
             } catch (IllegalArgumentException exception) {
-                throw new EwmAppConflitActionException(
+                throw new EwmAppConflictActionException(
                         thisService, REQUEST_NOT_COMPLETE.concat((SPLITTER)).concat((INVALID_DATA_SET)),
                         "Запрос на обновление статуса обработки анкеты события не распознан"
                 );
@@ -423,12 +460,12 @@ public class EwmServiceImpl implements EwmService {
                     event.getEventDate(),
                     ADMINS_ACTION_MODERATION_LIMIT);
             if (event.getState().equals(CANCELED)) {
-            throw new EwmAppConflitActionException(
+            throw new EwmAppConflictActionException(
                         thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
                         "Невозможно опубликовать афишу события - автор не запрашивал ее публикацию"
                 );
             } else if (event.getState().equals(PUBLISHED)) {
-                throw new EwmAppConflitActionException(
+                throw new EwmAppConflictActionException(
                         thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
                         "Невозможно опубликовать афишу события - она уже опубликована"
                 );
@@ -438,14 +475,14 @@ public class EwmServiceImpl implements EwmService {
                 event.setState(CANCELED);
                 return eventRepository.save(event).toEventFullDto();
             } else if (event.getState().equals(PUBLISHED)) {
-                throw new EwmAppConflitActionException(
+                throw new EwmAppConflictActionException(
                         thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
                         "Невозможно отменить редактирование афиши события - она опубликована," +
                                 " и не было запросов на ее редактирование"
                 );
             }
         } else if (adminRequest != null) {
-            throw new EwmAppConflitActionException(
+            throw new EwmAppConflictActionException(
                     thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(INVALID_DATA_SET),
                     "Данная операция <%s> для администратора недоступна, или еще не реализована"
             );
@@ -476,10 +513,11 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param eventRequests
-     * @param uId
-     * @param eId
-     * @return
+     * Логика обработки запроса автора афиши события имеющихся заявок на участие в мероприятии от пользователей
+     * @param eventRequests запрос с заявками, которые нужно обработать
+     * @param uId идентификатор автора афиши
+     * @param eId идентификатор его события
+     * @return результат обработки запроса
      */
     @Override
     public EventRequestStatusUpdateResult updateRequestStatuses(
@@ -493,7 +531,7 @@ public class EwmServiceImpl implements EwmService {
                 if (requestsIsModerated || (limit != 0)) {
                     var quote = limit - event.getConfirmedRequests();
                     if (quote <= 0) {
-                        throw new EwmAppConflitActionException(
+                        throw new EwmAppConflictActionException(
                                 thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
                                 "На мероприятии больше нет свободных мест"
                         );
@@ -521,7 +559,7 @@ public class EwmServiceImpl implements EwmService {
                         .getAllFromRequestTargetList(eId, eventRequests.requestIds());
                 for (var request : requests) {
                     if (request.getStatus().equals(CONFIRMED)) {
-                        throw new EwmAppConflitActionException(
+                        throw new EwmAppConflictActionException(
                                 thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
                                 "Одна из перечисленных заявок уже одобрена организатором мероприятия, " +
                                         "повторите запрос с корректным списком заявок"
@@ -547,9 +585,10 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param rId
-     * @param uId
-     * @return
+     * Отмена пользователем своей заявки на участие в мероприятии
+     * @param rId идентификатор заявки
+     * @param uId идентификатор ее автора
+     * @return новый статус заявки
      */
     @Override
     public ParticipationRequestDto cancelRequest(Long rId, Long uId) {
@@ -578,9 +617,10 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param eId
-     * @param uId
-     * @return
+     * Обработка запроса автора анкеты события на просмотр всех заявок на его событие
+     * @param eId идентификатор его афиши
+     * @param uId идентификатор самого автора
+     * @return запрошенный список заявок
      */
     @Override
     public List<ParticipationRequestDto> getRequestsForUserEvent(Long eId, Long uId) {
@@ -592,8 +632,9 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param uId
-     * @return
+     * Обработка запроса пользователя на получение всех его заявок на возможные мероприятия
+     * @param uId идентификатор пользователя
+     * @return список его заявок
      */
     @Override
     public List<ParticipationRequestDto> getAllUserRequests(Long uId) {
@@ -604,8 +645,9 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param eId
-     * @return
+     * Получить полную информацию о событии
+     * @param eId его идентификатор
+     * @return событие
      */
     @Override
     public EventFullDto getFullEvent(Long eId) {
@@ -620,12 +662,12 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param request
-     * @param params
-     * @return
+     * Получить список доступных событий по набору критериев
+     * @param params критерии для поиска
+     * @return список анкет
      */
     @Override
-    public List<EventShortDto> getEventsByCriteria(HttpServletRequest request, Map<String, String> params) {
+    public List<EventShortDto> getEventsByCriteria(Map<String, String> params) {
         CriteriaBuilder builder = entityManager.getCriteriaBuilder();
         CriteriaQuery<EventEntity> query = builder.createQuery(EventEntity.class);
         Root<EventEntity> event = query.from(EventEntity.class);
@@ -719,18 +761,18 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param request
-     * @param params
-     * @return
+     * Получение списка событий
+     * @param params параметры запроса
+     * @return список событий
      */
     @Override
-    public List<EventFullDto> findAllStats(HttpServletRequest request, Map<String, String> params) {
+    public List<EventFullDto> findAllStats(Map<String, String> params) {
         CriteriaBuilder builder = entityManager.getCriteriaBuilder();
         CriteriaQuery<EventEntity> query = builder.createQuery(EventEntity.class);
         Root<EventEntity> event = query.from(EventEntity.class);
         query.select(event);
 
-        Order order = builder.asc(event.get("id"));
+        builder.asc(event.get("id"));
         List<Predicate> predicates = new ArrayList<>();
         var userStrIds  = params.get("users");
         if (userStrIds != null) {
@@ -784,10 +826,11 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param eId
+     * Обновление количества уникальных просмотров анкеты
+     * @param eId идентификатор анкеты события
      */
     @Override
-    public void addReview(Long eId) {
+    public void addView(Long eId) {
         eventRepository.updateViewsById(eId);
     }
 
@@ -903,8 +946,9 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param dto
-     * @return
+     * Добавление модератором подборки событий
+     * @param dto макет подборки
+     * @return опубликованная подборка
      */
     @Override
     public CompilationDto addCompilation(CompilationNewDto dto) {
@@ -912,8 +956,9 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param cpId
-     * @return
+     * Получение пользователем любой подборки событий по ее идентификатору
+     * @param cpId идентификатор подборки
+     * @return найденная подборка
      */
     @Override
     public Optional<CompilationDto> getCompilationById(Long cpId) {
@@ -921,10 +966,11 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param pinned
-     * @param from
-     * @param size
-     * @return
+     * Найти подборку событий по набору критериев
+     * @param pinned прикреплена к главной странице или нет
+     * @param from искать с номера позиции в списке имеющихся
+     * @param size размер выборки
+     * @return полученный список
      */
     @Override
     public List<CompilationDto> getCompilations(Boolean pinned, Integer from, Integer size) {
@@ -933,7 +979,8 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param cpId
+     * Удалить подборку
+     * @param cpId идентификатор подборки
      */
     @Override
     public void deleteCompilation(Long cpId) {
@@ -945,9 +992,10 @@ public class EwmServiceImpl implements EwmService {
     }
 
     /**
-     * @param cpId
-     * @param dto
-     * @return
+     * Обновить содержимое подборки модератором
+     * @param cpId идентификатор подборки
+     * @param dto данные для обновления
+     * @return обновленная подборка
      */
     @Override
     public CompilationDto updateCompilation(Long cpId, CompilationUpdateRequestDto dto) {
@@ -982,4 +1030,174 @@ public class EwmServiceImpl implements EwmService {
         return relations;
     }
 
+    /**
+     * Поставить анкете рейтинг "событие заинтересовало"
+     * @param uId пользователь
+     * @param eId анкета
+     */
+    @Override
+    @Transactional
+    public void addEventExpectationRating(Long uId, Long eId) {
+        var event = getEvent(eId);
+        if (event.getEventDate().isBefore(Instant.now(Clock.systemUTC()))
+        || !event.getState().equals(PUBLISHED)) {
+            throw new EwmAppConflictActionException(
+                    thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
+                    "Оценить можно только предстоящее и опубликованное событие"
+            );
+        }
+        var rate = new EventExpectationRatingEntity();
+        rate.setEvent(event);
+        rate.setUser(getUser(uId));
+        try {
+            ratingExpectationRepository.save(rate);
+        } catch (DataIntegrityViolationException exception) {
+            throw new EwmAppConflictActionException(
+                    thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
+                    "Пользователь уже отметил событие как 'интересное'"
+            );
+        }
+        var eventStats = ratingStatRepository.findById(eId).get();
+        eventStats.setExpectationRate(eventStats.getExpectationRate() + 1);
+        ratingStatRepository.save(eventStats);
+    }
+
+    /**
+     * Получить информацию об рейтингах анкеты
+     * @param eId идентификатор анкеты события
+     * @return анкета
+     */
+    @Transactional
+    @Override
+    public EventRateDto getEventRating(Long eId) {
+        var event = getEvent(eId);
+        if (!event.getState().equals(PUBLISHED)) {
+            throw new EwmAppConflictActionException(
+                    thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
+                    "Посмотреть рейтинг можно только у опубликованного события"
+            );
+        }
+        return new EventRateDto(
+                event.getId(),
+                event.getAnnotation(),
+                ratingExpectationRepository.countByEvent_Id(eId),
+                getEventSatisfactionRating(event),
+                event.getCategoryEntity().getName(),
+                event.getInitiator().getName(),
+                0L,
+                event.getViews(),
+                event.getConfirmedRequests(),
+                toLocalDateTime(event.getEventDate()),
+                toLocalDateTime(event.getCreatedOn()),
+                event.getPaid(),
+                event.getLocation().toDto(),
+                event.getDescription()
+        );
+    }
+
+    /**
+     * Получить "Топ" по рейтингам
+     * @param top
+     * @return
+     */
+    @Transactional
+    @Override
+    public List<EventShortRateDto> getRatings(Integer top) {
+        var result = ratingStatRepository.findExpectationsTop(
+                Instant.now(Clock.systemUTC()),
+                PUBLISHED,
+                top
+        );
+        var topList = new ArrayList<EventShortRateDto>();
+        EventEntity event;
+        for (var element : result) {
+            event = element.getEvent();
+            topList.add(new EventShortRateDto(
+                    event.getId(),
+                    element.getExpectationRate(),
+                    getEventSatisfactionRating(event),
+                    event.getViews(),
+                    event.getTitle(),
+                    event.getCategoryEntity().getName(),
+                    event.getInitiator().getName(),
+                    toLocalDateTime(event.getEventDate()),
+                    toLocalDateTime(event.getPublishedOn())
+            ));
+        }
+        return topList;
+    }
+
+    /**
+     * Поставить событию после участия в нем оценку от 1 до 10
+     * @param uId пользователь
+     * @param eId событие
+     * @param ratingStr оценка
+     */
+    @Override
+    @Transactional
+    public void addEventSatisfactionRating(Long uId, Long eId, String ratingStr) {
+        var event = getEvent(eId);
+        var user = getUser(uId);
+        int rate;
+        try {
+            rate = Integer.parseInt(ratingStr);
+            if (rate < 1 || rate > 10) throw new NumberFormatException();
+        } catch (NumberFormatException exception) {
+            throw new EwmAppRequestValidateException(
+                    thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(INVALID_DATA_SET),
+                    "Оценка не распознана - укажите значение от 1 до 10 включительно"
+            );
+        }
+        var userIsNotMemberOfEvent = !participationRequestRepository
+                .existsByEvent_IdAndRequester_IdAndStatus(
+                        eId, uId, CONFIRMED
+                );
+        if (userIsNotMemberOfEvent || event.getEventDate().isAfter(Instant.now(Clock.systemUTC()))
+                || !event.getState().equals(PUBLISHED)) {
+            throw new EwmAppConflictActionException(
+                    thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
+                    "Оценить можно только опубликованное начавшееся/закончившееся событие, и только" +
+                            " если пользователь в нем участвует/участвовал"
+            );
+        }
+        var rating = new EventSatisfactionRatingEntity();
+        rating.setEvent(event);
+        rating.setUser(user);
+        rating.setSatisfactionRating(rate);
+        try {
+            ratingSatisfactionRepository.save(rating);
+        } catch (DataIntegrityViolationException exception) {
+            throw new EwmAppConflictActionException(
+                    thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(CONFLICT),
+                    "Пользователь уже поставил оценку событию"
+            );
+        }
+        var eventStats = ratingStatRepository.findById(eId).get();
+        var summarySatisfactionRate = eventStats.getSummarySatisfactionRate();
+        summarySatisfactionRate = summarySatisfactionRate + rate;
+        eventStats.setSummarySatisfactionRate(summarySatisfactionRate);
+        ratingStatRepository.save(eventStats);
+    }
+
+    private String getEventSatisfactionRating(EventEntity event) {
+        var eId = event.getId();
+        String satisfactionRating;
+        if (event.getEventDate().isAfter(Instant.now(Clock.systemUTC()))) {
+            satisfactionRating = "Составление рейтинга станет доступно после начала события";
+        } else {
+            var membersCount = ratingSatisfactionRepository.countByEvent_Id(eId);
+            if (membersCount == 0) {
+                satisfactionRating = "Участники мероприятия не найдены";
+            } else {
+                var eventStats = ratingStatRepository.findByEvent_Id(eId).orElseThrow(() ->
+                        new EwmAppInternalServiceException(
+                                thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(ENTITY_NOT_FOUND),
+                                "Ошибка сервиса - при создании анкеты события не сформирована статистика"
+                        )
+                );
+                satisfactionRating = String.valueOf(eventStats.getSummarySatisfactionRate() / membersCount);
+            }
+        }
+        return satisfactionRating;
+    }
 }

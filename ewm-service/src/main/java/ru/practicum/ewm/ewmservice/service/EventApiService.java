@@ -1,6 +1,5 @@
 package ru.practicum.ewm.ewmservice.service;
 
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import ru.practicum.ewm.ewmservice.dto.EventFullDto;
 import ru.practicum.ewm.ewmservice.dto.EventNewDto;
@@ -39,9 +38,9 @@ public interface EventApiService {
 
     EventFullDto getFullEvent(Long eId);
 
-    List<EventShortDto> getEventsByCriteria(HttpServletRequest request, Map<String, String> params);
+    List<EventShortDto> getEventsByCriteria(Map<String, String> params);
 
-    List<EventFullDto> findAllStats(HttpServletRequest request, Map<String, String> params);
+    List<EventFullDto> findAllStats(Map<String, String> params);
 
-    void addReview(Long eId);
+    void addView(Long eId);
 }

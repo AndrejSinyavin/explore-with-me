@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.Set;
 
 /**
- * DTO for {@link ru.practicum.ewm.ewmservice.entity.CompilationEntity}
+ * DTO для подборок событий {@link ru.practicum.ewm.ewmservice.entity.CompilationEntity}
  */
 public record CompilationDto(
         Long id,

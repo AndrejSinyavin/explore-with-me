@@ -8,6 +8,9 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import java.io.Serializable;
 
+/**
+ * DTO для одобрения или отказа публикации афиши события, с возможностью ее правки модератором
+ */
 public record EventUpdateByAdminRequestDto(
         @Size(min = 20, max = 2000, message = "Размер сообщения не соответствует заданному диапазону")
         String annotation,

@@ -5,7 +5,7 @@ import ru.practicum.ewm.ewmservice.entity.UserEntity;
 import java.io.Serializable;
 
 /**
- * DTO for {@link UserEntity}
+ * DTO для представления данных о пользователе {@link UserEntity}
  */
 public record UserDto(
         Long id,

@@ -72,6 +72,13 @@ public class PrivateLayerApiController {
             "\n==>   Запрос GET: получить список всех запросов пользователя ID {} на участие в мероприятиях";
     static String MY_REQUESTS_FUNDED =
             "\n<==   Ответ: '200 Ok' Запрос выполнен - список запросов на участие пользователя {} в мероприятиях: {}";
+    static String SET_EXPECTATION_RATING =
+            "\n==>   Запрос POST:  рейтинг мероприятия - пользователя ID {} интересует предстоящие мероприятие ID {}";
+    static String EXPECTATION_RATING_CREATED =
+            "\n<==   Ответ: '201 Create' Запрос выполнен - пользователь отметил событие как интересное";
+    static String SET_SATISFACTION_RATING =
+            "\n==>   Запрос POST:  рейтинг мероприятия - пользователь ID {} оценил мероприятие ID {} оценкой {}";
+    static String SATISFACTION_RATING_CREATED = "\n<==   Ответ: '201 Create' Запрос выполнен - оценка принята";
     static final String PathForUsersEvent = "/{user-id}/events/{event-id}";
 
     EwmService ewmService;
@@ -188,4 +195,26 @@ public class PrivateLayerApiController {
         return response;
     }
 
+    @ResponseStatus(HttpStatus.CREATED)
+    @PostMapping("{user-id}/expectations/{event-id}")
+    public void addEventExpectationRating(
+            @Positive(message = POSITIVE) @PathVariable(UID) Long uId,
+            @Positive(message = POSITIVE) @PathVariable(EID) Long eId
+    ) {
+        log.info(SET_EXPECTATION_RATING, uId, eId);
+        ewmService.addEventExpectationRating(uId, eId);
+        log.info(EXPECTATION_RATING_CREATED);
+    }
+
+    @ResponseStatus(HttpStatus.CREATED)
+    @PostMapping("{user-id}/satisfactions/{event-id}")
+    public void addEventSatisfactionRating(
+            @Positive(message = POSITIVE) @PathVariable(UID) Long uId,
+            @Positive(message = POSITIVE) @PathVariable(EID) Long eId,
+            @RequestParam(value = "rating", defaultValue = "10") String rating
+    ) {
+        log.info(SET_SATISFACTION_RATING, uId, eId, rating);
+        ewmService.addEventSatisfactionRating(uId, eId, rating);
+        log.info(SATISFACTION_RATING_CREATED);
+    }
 }

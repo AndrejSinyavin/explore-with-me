@@ -1,6 +1,5 @@
 package ru.practicum.ewm.ewmservice.controller;
 
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -160,9 +159,9 @@ public class AdminLayerApiController {
 
     @ResponseStatus(HttpStatus.OK)
     @GetMapping("/events")
-    public List<EventFullDto> findEvents(HttpServletRequest request, @RequestParam Map<String, String> params) {
+    public List<EventFullDto> findEvents(@RequestParam Map<String, String> params) {
         log.info(EVENTS_ADMIN_REQUEST, params);
-        var response = ewmService.findAllStats(request, params);
+        var response = ewmService.findAllStats(params);
         log.info(EVENTS_ADMIN_RESPONSE, response);
         return response;
     }

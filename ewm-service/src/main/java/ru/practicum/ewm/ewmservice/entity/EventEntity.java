@@ -1,5 +1,6 @@
 package ru.practicum.ewm.ewmservice.entity;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -92,6 +93,9 @@ public class EventEntity {
 
     @OneToMany(mappedBy = "event")
     Set<CompilationEventRelation> compilations = new LinkedHashSet<>();
+
+    @OneToMany(mappedBy = "event", fetch = FetchType.LAZY, cascade = CascadeType.REMOVE)
+    Set<EventExpectationRatingEntity> expectations = new LinkedHashSet<>();
 
     public EventFullDto toEventFullDto() {
         return new EventFullDto(
