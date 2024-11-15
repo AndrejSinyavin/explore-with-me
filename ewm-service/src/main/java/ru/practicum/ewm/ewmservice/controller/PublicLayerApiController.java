@@ -22,7 +22,7 @@ import ru.practicum.ewm.ewmservice.dto.CompilationDto;
 import ru.practicum.ewm.ewmservice.dto.EventRateDto;
 import ru.practicum.ewm.ewmservice.dto.EventFullDto;
 import ru.practicum.ewm.ewmservice.dto.EventShortDto;
-import ru.practicum.ewm.ewmservice.dto.EventsStatsDto;
+import ru.practicum.ewm.ewmservice.dto.EventShortRateDto;
 import ru.practicum.ewm.ewmservice.exception.EwmAppEntityNotFoundException;
 import ru.practicum.ewm.ewmservice.service.EwmService;
 import ru.practicum.ewm.statsserver.client.StatsClientImpl;
@@ -179,7 +179,7 @@ public class PublicLayerApiController {
 
     @ResponseStatus(HttpStatus.OK)
     @GetMapping("/ratings/")
-    public List<EventsStatsDto> getRatings(
+    public List<EventShortRateDto> getRatings(
             @Positive(message = POSITIVE) @RequestParam(value = "top", defaultValue = "10") Integer top
     ) {
         return ewmService.getRatings(top);

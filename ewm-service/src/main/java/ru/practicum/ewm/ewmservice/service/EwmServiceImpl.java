@@ -19,7 +19,7 @@ import ru.practicum.ewm.ewmservice.dto.CompilationDto;
 import ru.practicum.ewm.ewmservice.dto.CompilationNewDto;
 import ru.practicum.ewm.ewmservice.dto.CompilationUpdateRequestDto;
 import ru.practicum.ewm.ewmservice.dto.EventRateDto;
-import ru.practicum.ewm.ewmservice.dto.EventsStatsDto;
+import ru.practicum.ewm.ewmservice.dto.EventShortRateDto;
 import ru.practicum.ewm.ewmservice.dto.EventFullDto;
 import ru.practicum.ewm.ewmservice.dto.EventNewDto;
 import ru.practicum.ewm.ewmservice.dto.EventRequestStatusUpdateRequest;
@@ -40,12 +40,13 @@ import ru.practicum.ewm.ewmservice.entity.EventExpectationRatingEntity;
 import ru.practicum.ewm.ewmservice.entity.EventLocationEntity;
 import ru.practicum.ewm.ewmservice.entity.EventSatisfactionRatingEntity;
 import ru.practicum.ewm.ewmservice.entity.EventState;
-import ru.practicum.ewm.ewmservice.entity.EventStatsEntity;
+import ru.practicum.ewm.ewmservice.entity.EventRatesEntity;
 import ru.practicum.ewm.ewmservice.entity.UserRequestModerationState;
 import ru.practicum.ewm.ewmservice.entity.ParticipationRequestEntity;
 import ru.practicum.ewm.ewmservice.entity.ParticipationRequestState;
 import ru.practicum.ewm.ewmservice.entity.UserEntity;
 import ru.practicum.ewm.ewmservice.exception.EwmAppEntityNotFoundException;
+import ru.practicum.ewm.ewmservice.exception.EwmAppInternalServiceException;
 import ru.practicum.ewm.ewmservice.exception.EwmAppRequestValidateException;
 import ru.practicum.ewm.ewmservice.exception.EwmAppConflictActionException;
 import ru.practicum.ewm.ewmservice.repository.CategoryRepository;
@@ -263,7 +264,7 @@ public class EwmServiceImpl implements EwmService {
         if (newEvent.requestModeration() != null) createdEvent.setRequestModeration(newEvent.requestModeration());
         createdEvent.setState(EventState.PENDING);
         var event = eventRepository.save(createdEvent);
-        var eventStats = new EventStatsEntity();
+        var eventStats = new EventRatesEntity();
         eventStats.setEvent(event);
         eventStats.setExpectationRate(0L);
         eventStats.setSummarySatisfactionRate(0L);
@@ -1066,6 +1067,7 @@ public class EwmServiceImpl implements EwmService {
      * @param eId идентификатор анкеты события
      * @return анкета
      */
+    @Transactional
     @Override
     public EventRateDto getEventRating(Long eId) {
         var event = getEvent(eId);
@@ -1075,12 +1077,11 @@ public class EwmServiceImpl implements EwmService {
                     "Посмотреть рейтинг можно только у опубликованного события"
             );
         }
-        var expectation = ratingExpectationRepository.countByEvent_Id(eId);
         return new EventRateDto(
                 event.getId(),
                 event.getAnnotation(),
-                expectation,
-                getEventSatisfactionRating(event).toString(),
+                ratingExpectationRepository.countByEvent_Id(eId),
+                getEventSatisfactionRating(event),
                 event.getCategoryEntity().getName(),
                 event.getInitiator().getName(),
                 0L,
@@ -1099,21 +1100,22 @@ public class EwmServiceImpl implements EwmService {
      * @param top
      * @return
      */
+    @Transactional
     @Override
-    public List<EventsStatsDto> getRatings(Integer top) {
+    public List<EventShortRateDto> getRatings(Integer top) {
         var result = ratingStatRepository.findExpectationsTop(
                 Instant.now(Clock.systemUTC()),
                 PUBLISHED,
                 top
         );
-        var topList = new ArrayList<EventsStatsDto>();
+        var topList = new ArrayList<EventShortRateDto>();
         EventEntity event;
         for (var element : result) {
             event = element.getEvent();
-            topList.add(new EventsStatsDto(
+            topList.add(new EventShortRateDto(
                     event.getId(),
                     element.getExpectationRate(),
-                    getEventSatisfactionRating(event).toString(),
+                    getEventSatisfactionRating(event),
                     event.getViews(),
                     event.getTitle(),
                     event.getCategoryEntity().getName(),
@@ -1177,31 +1179,24 @@ public class EwmServiceImpl implements EwmService {
         ratingStatRepository.save(eventStats);
     }
 
-    private String getEventSatisfaction(EventEntity event) {
+    private String getEventSatisfactionRating(EventEntity event) {
         var eId = event.getId();
-        String satisfaction;
+        String satisfactionRating;
         if (event.getEventDate().isAfter(Instant.now(Clock.systemUTC()))) {
-            satisfaction = "Составление рейтинга станет доступно после начала события";
+            satisfactionRating = "Составление рейтинга станет доступно после начала события";
         } else {
-            var summarySatisfaction = ratingSatisfactionRepository.findByEvent_Id(eId);
-            var sum = summarySatisfaction
-                    .stream()
-                    .mapToInt(EventSatisfactionRatingEntity::getSatisfactionRating)
-                    .sum();
-            satisfaction = String.valueOf(sum / summarySatisfaction.size());
-        }
-        return satisfaction;
-    }
-
-    private Long getEventSatisfactionRating(EventEntity event) {
-        var eId = event.getId();
-        long satisfactionRating;
-        var membersCount = ratingSatisfactionRepository.countByEvent_Id(eId);
-        if (membersCount == 0) {
-            satisfactionRating = 0L;
-        } else {
-            var summarySatisfaction = ratingStatRepository.findByEvent_Id(eId).get().getSummarySatisfactionRate();
-            satisfactionRating = summarySatisfaction / membersCount;
+            var membersCount = ratingSatisfactionRepository.countByEvent_Id(eId);
+            if (membersCount == 0) {
+                satisfactionRating = "Участники мероприятия не найдены";
+            } else {
+                var eventStats = ratingStatRepository.findByEvent_Id(eId).orElseThrow(() ->
+                        new EwmAppInternalServiceException(
+                                thisService, REQUEST_NOT_COMPLETE.concat(SPLITTER).concat(ENTITY_NOT_FOUND),
+                                "Ошибка сервиса - при создании анкеты события не сформирована статистика"
+                        )
+                );
+                satisfactionRating = String.valueOf(eventStats.getSummarySatisfactionRate() / membersCount);
+            }
         }
         return satisfactionRating;
     }

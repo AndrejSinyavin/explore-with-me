@@ -22,7 +22,7 @@ import org.hibernate.annotations.OnDeleteAction;
 @Table(name = "event_stat", schema = "public", uniqueConstraints = {
         @UniqueConstraint(name = "uc_event_expectation", columnNames = {"event_id"})
 })
-public class EventStatsEntity {
+public class EventRatesEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)

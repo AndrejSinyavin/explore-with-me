@@ -1,13 +1,13 @@
 package ru.practicum.ewm.ewmservice.dto;
 
-import ru.practicum.ewm.ewmservice.entity.EventStatsEntity;
+import ru.practicum.ewm.ewmservice.entity.EventRatesEntity;
 
 import java.io.Serializable;
 
 /**
- * DTO для представления подробной информации о рейтингах и доступных полях события {@link EventStatsEntity}
+ * DTO для представления подробной информации о рейтингах и доступных полях события {@link EventRatesEntity}
  */
-public record EventsStatsDto(
+public record EventShortRateDto(
         Long eventId,
         Long expectationRate,
         String satisfactionRate,
